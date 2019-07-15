@@ -1,0 +1,56 @@
+<apex:page controller="GenerateLatvianAuditFileController" docType="html-5.0" >
+    <style>
+        .group {
+            position: relative;
+            float: left;
+            width: 200px;
+            margin: 5px;
+       		margin-top: 15px;
+        }
+        
+        .select-list-wrapper {
+            position: relative;
+            float: left;
+            margin: 5px;
+            width: 100px;
+        }
+        
+        .select-list {
+            width: 100px;
+        }
+    </style>
+    <apex:sectionHeader title="Latvian Audit File Generator"/>
+    <apex:form id="form">
+        <apex:pageMessages />
+        <div class="main-block">
+            <div class="select-list-wrapper">
+                <span class="span-position">Choose Year:</span>
+                <apex:selectList disabled="false" value="{!periodYear}" styleClass="select-list">
+                    <apex:selectOptions value="{!yearOptions}"></apex:selectOptions>
+                </apex:selectList>
+            </div>
+            <div class="select-list-wrapper">
+                <span class="span-position">Choose Month:</span>
+                <apex:selectList disabled="false" value="{!periodMonth}" styleClass="select-list">
+                    <apex:selectOptions value="{!monthOptions}"></apex:selectOptions>
+                </apex:selectList>
+            </div>
+            <div class="group">
+                <div class="generate-button">
+                    <apex:commandButton action="{!createXML}" value="Create Latvian Audit Report" reRender="form" status="filePreparationStatus"/>
+                </div>
+                <div class="generated-link">
+                    <apex:actionStatus id="filePreparationStatus">
+                        <apex:facet name="start">
+                            <div style="width: 500px;">
+                                <img src="/img/loading24.gif" style="vertical-align:middle;"/>
+                                    <span style="margin-left: 10px; font-size: 12px; font-weight: bold; color: #000000;">Please wait while we process your request...</span>
+                                </div>
+                        </apex:facet>
+                    </apex:actionStatus><br/>
+                    <apex:outputLink rendered="{!docLink != null}" value="{!docLink}">Download File</apex:outputLink>
+               </div>      
+            </div>
+        </div>
+    </apex:form>
+</apex:page>
