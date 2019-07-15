@@ -16,9 +16,10 @@ public class GeneratePolandInvReportCtrlTest {
             
             Integer lim = 10;
             CreateTestData.postInvoices(lim);
+            CreateTestData.postPInvoices(lim);
             GeneratePolandInvoicesReportController generatePolandReportController = new GeneratePolandInvoicesReportController();
-            generatePolandReportController.startDate = Date.today().addYears(-1);
-            generatePolandReportController.endDate = Date.today();  
+            generatePolandReportController.selectedYear = String.valueOf(Date.today().year());
+            generatePolandReportController.selectedMonth = '123'; 
             generatePolandReportController.fileType = 'report1';
             generatePolandReportController.createXml();
             
@@ -35,9 +36,10 @@ public class GeneratePolandInvReportCtrlTest {
             
             Integer lim = 10;
             CreateTestData.postInvoices(lim);
+            CreateTestData.postPInvoices(lim);
             GeneratePolandInvoicesReportController generatePolandReportController = new GeneratePolandInvoicesReportController();
-            generatePolandReportController.startDate = Date.today().addYears(-1);
-            generatePolandReportController.endDate = Date.today();  
+            generatePolandReportController.selectedYear = String.valueOf(Date.today().year());
+            generatePolandReportController.selectedMonth = '123'; 
             generatePolandReportController.fileType = 'report2';
             generatePolandReportController.createXml();
             
@@ -54,10 +56,13 @@ public class GeneratePolandInvReportCtrlTest {
             
             Integer lim = 10;
             CreateTestData.postInvoices(lim);
+            CreateTestData.postPInvoices(lim);
             GeneratePolandInvoicesReportController generatePolandReportController = new GeneratePolandInvoicesReportController();
-            generatePolandReportController.startDate = Date.today().addYears(-1);
-            generatePolandReportController.endDate = Date.today();  
+            generatePolandReportController.periodOptions.add(0,  new SelectOption('123', '123'));
+            generatePolandReportController.periodYearList = new List<String>{'2018', '2019', '2020', '2021'};
             generatePolandReportController.fileType = 'report3';
+            generatePolandReportController.selectedYear = String.valueOf(Date.today().year());
+            generatePolandReportController.selectedMonth = '123'; 
             generatePolandReportController.createXml();
             
         	Test.stopTest();
