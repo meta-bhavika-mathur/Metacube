@@ -1,41 +1,61 @@
 public with sharing class GeneratePolandInvoicesReportController {
     
-    private List<Poland_Invoices_File_Mapping__mdt> mappingList;
+    	private List<Poland_Invoices_File_Mapping__mdt> mappingList;
 	private Map<String, List<Poland_Invoices_File_Mapping__mdt>> mappingRecordByLabelMap;
 	private Map<String, Poland_Invoices_File_Mapping__mdt> mappingRecordByDeveloperNameMap;
 	private String xmlFileString;
 	private String folderId;
     
 	public String docLink{get; set;}    
-    public Date startDate{get; set;}
-	public Date endDate{get; set;}
 	public String fileType{get; set;}
+    	public String selectedYear{get; set;}
+	public String selectedMonth{get; set;}    
+    	public List<SelectOption> yearOptions{get; set;}
+	public List<SelectOption> periodOptions{get; set;}
 	public List<SelectOption> fileTypeOptions{get; set;}
 	
-    final String SALES_FA_REPORT = 'JPK_FA_SaleInv';
-    final String VAT_REPORT = 'JPK_VAT';
-    final String KR_ALL_ENTRIES = 'JPK_KR_AllEntries';
-    final String SALES_FA_REPORT_NAME = 'JPK_FA_SaleInv Report';
-    final String VAT_REPORT_NAME = 'JPK_VAT Report';
-    final String ALL_ENTRIES_REPORT_NAME = 'PolUnifiedExportksiegi_JPK_KR_AllEntries';
-    final String CUSTOM_EXCEPTION_MESSAGE = 'Please select a report type!';
+    	final String SALES_FA_REPORT = 'JPK_FA_SaleInv';
+    	final String VAT_REPORT = 'JPK_VAT';
+    	final String KR_ALL_ENTRIES = 'JPK_KR_AllEntries';
+    	final String SALES_FA_REPORT_NAME = 'JPK_FA_SaleInv Report';
+    	final String VAT_REPORT_NAME = 'JPK_VAT Report';
+    	final String ALL_ENTRIES_REPORT_NAME = 'PolUnifiedExportksiegi_JPK_KR_AllEntries';
+    	final String CUSTOM_EXCEPTION_MESSAGE = 'Please select a report type!';
+    
+    	public String AUDIT_FILE_COMPANY_NAME = '';
+    
+    	private Map<String, glaForAllEntriesWrapper> mapOfGlaInfo;
     
 	private List<c2g__codaInvoice__c> listOfSalesInvoices;
 	private List<c2g__codaInvoiceLineItem__c> listOfSalesLineItems;
-    private List<c2g__codaTransaction__c> listOfTransactions;
-    private List<c2g__codaCreditNote__c> listOfCreditNotes;
-    private List<c2g__codaJournal__c> listOfJournals;
-    private List<c2g__codaGeneralLedgerAccount__c> listOfGLAs;
-    private List<c2g__codaPurchaseInvoice__c> listOfPurchaseInvoicesForVATReport;
-    private List<c2g__codaCreditNoteLineItem__c> listOfCreditNotesLines = new List<c2g__codaCreditNoteLineItem__c>();
-    private List<c2g__codaPurchaseInvoiceLineItem__c> listOfPurchaseLinesForVATReport = new List<c2g__codaPurchaseInvoiceLineItem__c>();
+    	private List<c2g__codaTransaction__c> listOfTransactions;
+    	private List<c2g__codaCreditNote__c> listOfCreditNotes;
+    	private List<c2g__codaJournal__c> listOfJournals;
+    	private List<c2g__codaGeneralLedgerAccount__c> listOfGLAs;
+    	private List<c2g__codaPurchaseInvoice__c> listOfPurchaseInvoicesForVATReport;
+    	private List<c2g__codaCreditNoteLineItem__c> listOfCreditNotesLines = new List<c2g__codaCreditNoteLineItem__c>();
+    	private List<c2g__codaPurchaseInvoiceLineItem__c> listOfPurchaseLinesForVATReport = new List<c2g__codaPurchaseInvoiceLineItem__c>();
    
+   	private Map<String, String> mapOfOpeningBal;
+	private Map<String, String> mapOfClosingBal;
+	private Map<String, String> mapOfDebitsForReportingPeriod;
+	private Map<String, String> mapOfCreditsForReportingPeriod;
+	private Map<String, String> mapOfDbFromBeginingToEnd;
+	private Map<String, String> mapOfCrFromBeginingToEnd;
+//	private Map<String, String> mapOfDebitBal;
+//	private Map<String, String> mapOfCreditBal;
+
+	public List<String> listOfPeriods;
+    	public List<String> listOfPeriodMonths;
+    	public List<String> periodYearList{get; set;}
+	
 	public GeneratePolandInvoicesReportController(){
         try{
-            startDate = endDate = Date.today();
+            getPeriods();
             initFileTypes();
             getFieldMapping();
-            sortFieldMapping(mappingList);            
+            sortFieldMapping(mappingList); 
+            AUDIT_FILE_COMPANY_NAME = mappingRecordByDeveloperNameMap.get('AuditFileCompany0').Default_Value__c;                      
         }catch(Exception e){
             ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, e.getMessage() + ' ' + e.getStackTraceString()));
         }
@@ -48,23 +68,32 @@ public with sharing class GeneratePolandInvoicesReportController {
         fileTypeOptions.add(new SelectOption('report3', KR_ALL_ENTRIES));
 	}
 	
+    public void getPeriods(){
+		ReportsGenerationUtility.getPeriods();
+        yearOptions = ReportsGenerationUtility.yearOptions;
+        periodOptions = ReportsGenerationUtility.periodOptions;
+	}
+    
 	public void createXml(){
-        try{	 
-		    	if(fileType == 'report1'){
-		    		getSalesInvoicesCommonMethod();
-                    getPurchaseInvForVATReport();
-					createInvoicesVATReport();
-				}else if(fileType == 'report2'){
-                    getSalesInvoicesCommonMethod();
-                    getCreditNotesForSalesReport();
-					createSalesInvoicesReport();
-				}else if(fileType == 'report3'){
-                    getSalesInvoicesCommonMethod();
-                    getDataForAllEntriesReport();
-					createAllEntriesReport();
-				}else{
-					throw new CustomException(CUSTOM_EXCEPTION_MESSAGE);
-				}           
+        try{	
+            	if(String.isBlank(selectedYear) || String.isBlank(selectedMonth)){
+                		throw new CustomException('Choose Year and Month');
+                }else{
+                   	if(fileType == 'report1'){
+                        getSalesInvoicesCommonMethod();
+                        getPurchaseInvForVATReport();
+                        createInvoicesVATReport();
+					}else if(fileType == 'report2'){
+                        getSalesInvoicesCommonMethod();
+                        createSalesInvoicesReport();
+					}else if(fileType == 'report3'){
+                        getSalesInvoicesCommonMethod();
+                        getDataForAllEntriesReport();
+                        createAllEntriesReport();
+					}else{
+						throw new CustomException(CUSTOM_EXCEPTION_MESSAGE);
+					}   
+                }		    	         
         }catch(Exception e){
             	ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, e.getMessage() + ' ' + e.getStackTraceString()));
         }
@@ -113,10 +142,6 @@ public with sharing class GeneratePolandInvoicesReportController {
                                     mappingRecordByDeveloperNameMap.get('Naglowek3').Default_Value__c) + 
                                     addNode(mappingRecordByDeveloperNameMap.get('Naglowek4').Namespace__c + ':' + mappingRecordByDeveloperNameMap.get('Naglowek4').Tag_Name__c, 
                                     String.valueOf(System.now())) +
-                                    addNode(mappingRecordByDeveloperNameMap.get('Naglowek5').Namespace__c + ':' + mappingRecordByDeveloperNameMap.get('Naglowek5').Tag_Name__c, 
-                                    String.valueOf(startDate)) +
-                                    addNode(mappingRecordByDeveloperNameMap.get('Naglowek6').Namespace__c + ':' + mappingRecordByDeveloperNameMap.get('Naglowek6').Tag_Name__c, 
-                                    String.valueOf(endDate)) +
                                     addNode(mappingRecordByDeveloperNameMap.get('Naglowek7').Namespace__c + ':' + mappingRecordByDeveloperNameMap.get('Naglowek7').Tag_Name__c, 
                                     mappingRecordByDeveloperNameMap.get('Naglowek7').Default_Value__c) +
                                     addNode(mappingRecordByDeveloperNameMap.get('Naglowek8').Namespace__c + ':' + mappingRecordByDeveloperNameMap.get('Naglowek8').Tag_Name__c, 
@@ -131,15 +156,15 @@ public with sharing class GeneratePolandInvoicesReportController {
     private string getKR_ReportZOiS(){
         String zoisStr = '';
     	String zoisStrBody = ' ';
-    	
+
         try{
-        	if(listOfGLAs != null){
-        		for(c2g__codaGeneralLedgerAccount__c gla : listOfGLAs){
-	                zoisStrBody = getZoisStrBody(gla); 
+        	if(mapOfGlaInfo != null && !mapOfGlaInfo.isEmpty()){
+        		for(String glaRepCode : mapOfGlaInfo.keySet()){
+        			zoisStrBody = getZoisStrBody(glaRepCode); 
 	                zoisStr += addNodeWithAttributes(mappingRecordByDeveloperNameMap.get('KR_ZOiS0').Namespace__c + ':' +
-	                                     mappingRecordByDeveloperNameMap.get('KR_ZOiS0').Tag_Name__c, zoisStrBody,
-	                                     getMapOfAttributesAndValByLabel(mappingRecordByDeveloperNameMap.get('KR_ZOiS0').MasterLabel, null)); 
-           		 }
+	                           mappingRecordByDeveloperNameMap.get('KR_ZOiS0').Tag_Name__c, zoisStrBody,
+	                           getMapOfAttributesAndValByLabel(mappingRecordByDeveloperNameMap.get('KR_ZOiS0').MasterLabel, null)); 
+        		}  		
         	}            	            
         }catch(Exception e){
     		ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, e.getMessage() + ' ' + e.getStackTraceString()));
@@ -147,64 +172,46 @@ public with sharing class GeneratePolandInvoicesReportController {
    		return zoisStr;
     }
     
-    private String getZoisStrBody(c2g__codaGeneralLedgerAccount__c gla){
+    private String getZoisStrBody(String glaRepCode){
     	String zoisBodyStr = '';
-    	String attributeStr;
-    	String fieldName = '';
-    	String fieldVal = '';
-    	Decimal openingBal = 0.0;
-    	Decimal closingBal = 0.0;
-    	Decimal debitBal = 0.0;
-    	Decimal creditBal = 0.0;  	
-    	
-        try{		
-    		String periodFieldName = 'c2g__Transaction__r.c2g__Period__r.c2g__PeriodNumber__c';
-    		String homeValueFieldName = 'c2g__HomeValue__c';
-    		
-    		if(gla.c2g__TransactionLineItems__r != null){
-    			for(c2g__codaTransactionLineItem__c transctn : gla.c2g__TransactionLineItems__r){		
-    				String transactionPeriodNumber = ReportsGenerationUtility.getValue(transctn, periodFieldName);
-    				Decimal lineItemHomeValue = Decimal.valueOf(ReportsGenerationUtility.getValue(transctn, homeValueFieldName));
-    				
-    				if(transactionPeriodNumber == '000'){  	                      
-                        openingBal += (lineItemHomeValue != null) ? lineItemHomeValue : 0.0;
-                   }else if(transactionPeriodNumber == '101'){
-						closingBal += (lineItemHomeValue != null) ? lineItemHomeValue : 0.0;
-                   }else{                      
-                            if(lineItemHomeValue != null && lineItemHomeValue >= 0){	
-                                debitBal += lineItemHomeValue;           		
-                            }else if(lineItemHomeValue != null && lineItemHomeValue < 0){
-                                creditBal += lineItemHomeValue;   		
-                            }
-                        }   	
-    			}
-    			for(Integer i=1; i<=7; i++){
-	                attributeStr = 'KR_ZOiS' + i;
-	                fieldName = mappingRecordByDeveloperNameMap.get(attributeStr).SFDC_Field_Name__c;
-	                fieldVal = (fieldName != null) ? ReportsGenerationUtility.getValue(gla, fieldName) : null;
-	                zoisBodyStr += addNode(mappingRecordByDeveloperNameMap.get(attributeStr).Namespace__c + ':' +
-	                                            mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c, fieldVal != null ? fieldVal : '');
-    			}  
-    			zoisBodyStr += addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS8').Namespace__c + ':' +
-                                            mappingRecordByDeveloperNameMap.get('KR_ZOiS8').Tag_Name__c, String.valueOf(openingBal)) +
-                           addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS9').Namespace__c + ':' +
-                                            mappingRecordByDeveloperNameMap.get('KR_ZOiS9').Tag_Name__c, String.valueOf(closingBal)) +
-                           addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS10').Namespace__c + ':' +
-                                            mappingRecordByDeveloperNameMap.get('KR_ZOiS10').Tag_Name__c, String.valueOf(debitBal)) +
-                           addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS11').Namespace__c + ':' +
-                                            mappingRecordByDeveloperNameMap.get('KR_ZOiS11').Tag_Name__c, String.valueOf(creditBal)) + 
-                           addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS12').Namespace__c + ':' +
-                                            mappingRecordByDeveloperNameMap.get('KR_ZOiS12').Tag_Name__c, String.valueOf(openingBal)) +  
-                           addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS13').Namespace__c + ':' +
-                                            mappingRecordByDeveloperNameMap.get('KR_ZOiS13').Tag_Name__c, String.valueOf(closingBal)) +
-                           addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS14').Namespace__c + ':' +
-                                            mappingRecordByDeveloperNameMap.get('KR_ZOiS14').Tag_Name__c, String.valueOf(debitBal)) +
-                           addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS15').Namespace__c + ':' +
-                                            mappingRecordByDeveloperNameMap.get('KR_ZOiS15').Tag_Name__c, String.valueOf(creditBal));  
-    		}   		
-        }catch(Exception e){
+    	String kodKonta; 
+    	String opisKonta, typKonta, kodZespolu, opisZespolu, kodKategorii, opisKategorii; 
+    	glaForAllEntriesWrapper gla = mapOfGlaInfo.get(glaRepCode);
+    	try{
+    		zoisBodyStr = addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS1').Namespace__c + ':' +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS1').Tag_Name__c, gla.kodKonta != null ? gla.kodKonta : '') +
+							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS2').Namespace__c + ':' +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS2').Tag_Name__c, gla.opisKonta != null ? gla.opisKonta : '') +
+							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS3').Namespace__c + ':' +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS3').Tag_Name__c, gla.typKonta != null ? gla.typKonta : '') +
+							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS4').Namespace__c + ':' +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS4').Tag_Name__c, gla.kodZespolu != null ? gla.kodZespolu : '') +
+							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS5').Namespace__c + ':' +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS5').Tag_Name__c, gla.opisZespolu != null ? gla.opisZespolu : '') +
+							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS6').Namespace__c + ':' +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS6').Tag_Name__c, gla.kodKategorii != null ? gla.kodKategorii : '') +
+							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS7').Namespace__c + ':' +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS7').Tag_Name__c, gla.opisKategorii != null ? gla.opisKategorii : '') +
+							
+							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS8').Namespace__c + ':' +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS8').Tag_Name__c, mapOfOpeningBal.get(glaRepCode) != null ? mapOfOpeningBal.get(glaRepCode) : '') +
+							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS9').Namespace__c + ':' +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS9').Tag_Name__c, mapOfClosingBal.get(glaRepCode) != null ? mapOfClosingBal.get(glaRepCode) : '') +
+							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS10').Namespace__c + ':' +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS10').Tag_Name__c, mapOfDebitsForReportingPeriod.get(glaRepCode) != null ? mapOfDebitsForReportingPeriod.get(glaRepCode) : '') +
+							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS11').Namespace__c + ':' +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS11').Tag_Name__c, mapOfCreditsForReportingPeriod.get(glaRepCode) != null ? mapOfCreditsForReportingPeriod.get(glaRepCode) : '') +
+							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS12').Namespace__c + ':' +
+                            mappingRecordByDeveloperNameMap.get('KR_ZOiS12').Tag_Name__c, mapOfDbFromBeginingToEnd.get(glaRepCode) != null ? mapOfDbFromBeginingToEnd.get(glaRepCode) : '') + 
+                            addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS13').Namespace__c + ':' +
+                            mappingRecordByDeveloperNameMap.get('KR_ZOiS13').Tag_Name__c, mapOfCrFromBeginingToEnd.get(glaRepCode) != null ? mapOfCrFromBeginingToEnd.get(glaRepCode) : '') +
+                            addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS14').Namespace__c + ':' +
+                            mappingRecordByDeveloperNameMap.get('KR_ZOiS14').Tag_Name__c, mapOfDebitsForReportingPeriod.get(glaRepCode) != null ? mapOfDebitsForReportingPeriod.get(glaRepCode) : '') +
+                            addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS15').Namespace__c + ':' +
+                            mappingRecordByDeveloperNameMap.get('KR_ZOiS15').Tag_Name__c, mapOfCreditsForReportingPeriod.get(glaRepCode) != null ? mapOfCreditsForReportingPeriod.get(glaRepCode) : '');  							
+    	}catch(Exception e){
     		ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, e.getMessage() + ' ' + e.getStackTraceString()));
-    	}    	
+    	}
     	return zoisBodyStr;
     }
     
@@ -388,8 +395,6 @@ public with sharing class GeneratePolandInvoicesReportController {
     		 					addNode(mappingRecordByDeveloperNameMap.get('VAT_Naglowek2').Tag_Name__c, mappingRecordByDeveloperNameMap.get('VAT_Naglowek2').Default_Value__c) + 
     		 					addNode(mappingRecordByDeveloperNameMap.get('VAT_Naglowek3').Tag_Name__c, mappingRecordByDeveloperNameMap.get('VAT_Naglowek3').Default_Value__c) + 
     		 					addNode(mappingRecordByDeveloperNameMap.get('VAT_Naglowek4').Tag_Name__c, String.valueOf(System.now())) +
-    		 					addNode(mappingRecordByDeveloperNameMap.get('VAT_Naglowek5').Tag_Name__c, String.valueOf(startDate)) +
-    		 					addNode(mappingRecordByDeveloperNameMap.get('VAT_Naglowek6').Tag_Name__c, String.valueOf(endDate)) +
     		 					addNode(mappingRecordByDeveloperNameMap.get('VAT_Naglowek7').Tag_Name__c, mappingRecordByDeveloperNameMap.get('VAT_Naglowek7').Default_Value__c)
     		 					 	
     		 				); 		 
@@ -575,10 +580,6 @@ public with sharing class GeneratePolandInvoicesReportController {
     		 					mappingRecordByDeveloperNameMap.get('Naglowek3').Default_Value__c) + 
     		 					addNode(mappingRecordByDeveloperNameMap.get('Naglowek4').Namespace__c + ':' + mappingRecordByDeveloperNameMap.get('Naglowek4').Tag_Name__c, 
     		 					String.valueOf(System.now())) +
-    		 					addNode(mappingRecordByDeveloperNameMap.get('Naglowek5').Namespace__c + ':' + mappingRecordByDeveloperNameMap.get('Naglowek5').Tag_Name__c, 
-    		 					String.valueOf(startDate)) +
-    		 					addNode(mappingRecordByDeveloperNameMap.get('Naglowek6').Namespace__c + ':' + mappingRecordByDeveloperNameMap.get('Naglowek6').Tag_Name__c, 
-    		 					String.valueOf(endDate)) +
     		 					addNode(mappingRecordByDeveloperNameMap.get('Naglowek7').Namespace__c + ':' + mappingRecordByDeveloperNameMap.get('Naglowek7').Tag_Name__c, 
     		 					mappingRecordByDeveloperNameMap.get('Naglowek7').Default_Value__c) +
     		 					addNode(mappingRecordByDeveloperNameMap.get('Naglowek8').Namespace__c + ':' + mappingRecordByDeveloperNameMap.get('Naglowek8').Tag_Name__c, 
@@ -631,10 +632,11 @@ public with sharing class GeneratePolandInvoicesReportController {
     	return adresPodmiotu;
     }
     
+    //To add information of invoices
     private String getFakturaList(){
     	String fakturaStr = '';
     	String fakturaStrBody = ' ';	
-    	//To add information of invoices
+
         if(listOfSalesInvoices != null){
             for(c2g__codaInvoice__c invoice : listOfSalesInvoices){
     		fakturaStrBody = getfakturaStrBody(invoice); 
@@ -643,21 +645,10 @@ public with sharing class GeneratePolandInvoicesReportController {
     				   			 getMapOfAttributesAndValByLabel(mappingRecordByDeveloperNameMap.get('Faktura0').MasterLabel, null)); 
     		}	
         }
-        // Add credit notes information 
-        if(listOfCreditNotes != null){
-            System.debug('List of credit notes:' + listOfCreditNotes);
-            for(c2g__codaCreditNote__c creditNote : listOfCreditNotes){
-    			fakturaStrBody = getfakturaStrBody(creditNote); 
-    			fakturaStr += addNodeWithAttributes(mappingRecordByDeveloperNameMap.get('Faktura0').Namespace__c + ':' +
-    				   			 mappingRecordByDeveloperNameMap.get('Faktura0').Tag_Name__c, fakturaStrBody,
-    				   			 getMapOfAttributesAndValByLabel(mappingRecordByDeveloperNameMap.get('Faktura0').MasterLabel, null)); 
-    		}	
-        }
    		return fakturaStr;
-    }  
+    } 
 	
-	// To set infromation related to sales invoice/credit notes    
-    private String getfakturaStrBody(sObject salesObj){
+	private String getfakturaStrBody(c2g__codaInvoice__c salesInv){
     	String fakturaBodyStr = '';
     	String attributeStr;
         String fieldName = '';
@@ -674,27 +665,23 @@ public with sharing class GeneratePolandInvoicesReportController {
                                           mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c, fieldVal);
             }else{           	
             	if(attributeStr == 'Faktura7'){
-            		taxCode = ReportsGenerationUtility.getValue(salesObj, (mappingRecordByDeveloperNameMap.get('Faktura7').SFDC_Field_Name__c != null) ? 
+            		taxCode = ReportsGenerationUtility.getValue(salesInv, (mappingRecordByDeveloperNameMap.get('Faktura7').SFDC_Field_Name__c != null) ? 
             													mappingRecordByDeveloperNameMap.get('Faktura7').SFDC_Field_Name__c : '');
-            		taxRegNum = ReportsGenerationUtility.getValue(salesObj, (mappingRecordByDeveloperNameMap.get('Faktura8').SFDC_Field_Name__c != null) ?
+            		taxRegNum = ReportsGenerationUtility.getValue(salesInv, (mappingRecordByDeveloperNameMap.get('Faktura8').SFDC_Field_Name__c != null) ?
             													mappingRecordByDeveloperNameMap.get('Faktura8').SFDC_Field_Name__c : '');
             		if(taxCode != null && taxRegNum != null)
             			fieldVal = taxCode + taxRegNum;
             	}else if(attributeStr == 'Faktura4'){
-            		fieldVal = (ReportsGenerationUtility.getValue(salesObj, 'c2g__Account__r.Primary_Country__c') != null) ?
-            					ReportsGenerationUtility.getValue(salesObj, 'c2g__Account__r.Primary_Country__c') : '';
+            		fieldVal = (ReportsGenerationUtility.getValue(salesInv, 'c2g__Account__r.Primary_Country__c') != null) ?
+            					ReportsGenerationUtility.getValue(salesInv, 'c2g__Account__r.Primary_Country__c') : '';
                 }else if(attributeStr == 'Faktura14'){
-                    if(salesObj.getsObjectType() == c2g__codaInvoice__c.sObjectType)
-           				fieldVal = ReportsGenerationUtility.getValue(salesObj, (mappingRecordByDeveloperNameMap.get('Faktura14').SFDC_Field_Name__c != null) ? 
-            					   mappingRecordByDeveloperNameMap.get('Faktura14').SFDC_Field_Name__c : ''); 
-           			else if(salesObj.getsObjectType() == c2g__codaCreditNote__c.sObjectType)
-           			    fieldVal = ReportsGenerationUtility.getValue(salesObj, (mappingRecordByDeveloperNameMap.get('FakturaCreditNote14').SFDC_Field_Name__c != null) ? 
-            					   mappingRecordByDeveloperNameMap.get('FakturaCreditNote14').SFDC_Field_Name__c : '');   
+					fieldVal = ReportsGenerationUtility.getValue(salesInv, (mappingRecordByDeveloperNameMap.get('Faktura14').SFDC_Field_Name__c != null) ? 
+            					mappingRecordByDeveloperNameMap.get('Faktura14').SFDC_Field_Name__c : '');          			  
                 }else if(attributeStr == 'Faktura23'){
-                 	fieldVal = (salesObj.getsObjectType() == c2g__codaInvoice__c.sObjectType) ? 'VAT' : 'CORRECTION';
+                 	fieldVal = 'VAT';
                 }else{
             		fieldName = mappingRecordByDeveloperNameMap.get(attributeStr).SFDC_Field_Name__c;
-		            fieldVal = (fieldName != null) ? ReportsGenerationUtility.getValue(salesObj, fieldName) : '';
+		            fieldVal = (fieldName != null) ? ReportsGenerationUtility.getValue(salesInv, fieldName) : '';
             	} 
             	fakturaBodyStr += addNode(mappingRecordByDeveloperNameMap.get(attributeStr).Namespace__c + ':' +
 		                                      mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c, 
@@ -707,7 +694,6 @@ public with sharing class GeneratePolandInvoicesReportController {
     private String getFakturaCtrl(){
     	String fakturaCtrl = '';
         Integer numOfInvoices = 0;
-        Integer numOfCreditNotes = 0;
         Decimal totalValueOfInvoices = 0.0;
     	
         if(listOfSalesInvoices != null){
@@ -715,13 +701,9 @@ public with sharing class GeneratePolandInvoicesReportController {
             for(c2g__codaInvoice__c inv : listOfSalesInvoices){
                 totalValueOfInvoices += (ReportsGenerationUtility.getValue(inv, mappingRecordByDeveloperNameMap.get('Faktura14').SFDC_Field_Name__c) != '') ?
                 						Decimal.valueOf(ReportsGenerationUtility.getValue(inv, mappingRecordByDeveloperNameMap.get('Faktura14').SFDC_Field_Name__c)) : 0.0;
-            }
-            
+            }         
         } 
-        if(listOfCreditNotes != null){
-        	numOfCreditNotes = listOfCreditNotes.size();
-        }
-        String liczbaFakturVal = String.valueOf(numOfInvoices + numOfCreditNotes);
+        String liczbaFakturVal = String.valueOf(numOfInvoices);
     	String wartoscFakturVal = String.valueOf(totalValueOfInvoices);   	
     	fakturaCtrl = addNode(mappingRecordByDeveloperNameMap.get('FakturaCtrl0').Namespace__c + ':' +
     				   		  mappingRecordByDeveloperNameMap.get('FakturaCtrl0').Tag_Name__c, 
@@ -891,12 +873,16 @@ public with sharing class GeneratePolandInvoicesReportController {
     private void getSalesInvoicesCommonMethod(){
     	Boolean hasSubquery = true;
         String objectName = mappingRecordByDeveloperNameMap.get('Faktura1').Object_Name__c;
-        String whereCondition =  'c2g__Transaction__c != null and c2g__Transaction__r.c2g__TransactionDate__c >= :startDate ' +
-      						     'and c2g__Transaction__r.c2g__TransactionDate__c <= :endDate';
-      
+        String whereCondition = 'c2g__Transaction__c != null and c2g__Transaction__r.c2g__Period__r.c2g__PeriodNumber__c = :selectedMonth' +
+                    			' AND c2g__Transaction__r.c2g__Period__r.c2g__YearName__r.Name = :selectedYear';
+        
+        if(String.isNotBlank(AUDIT_FILE_COMPANY_NAME)){
+        	whereCondition += ' AND c2g__Transaction__r.c2g__OwnerCompany__r.Name = :AUDIT_FILE_COMPANY_NAME';
+        } 
+        
         // If report is VAT Report
         if(fileType == 'report1'){
-           whereCondition += ' and (c2g__TaxCode1__c != null or c2g__TaxCode2__c != null or c2g__TaxCode3__c != null)';
+           whereCondition += ' AND (c2g__TaxCode1__c != null or c2g__TaxCode2__c != null or c2g__TaxCode3__c != null)';
         }
         
         Set<String> fieldNameSet = new Set<String>();
@@ -920,10 +906,13 @@ public with sharing class GeneratePolandInvoicesReportController {
 	        fieldNameSet.add('c2g__TaxCode3__c');
 	        fieldNameSet.add('c2g__Account__r.Primary_Country__c');
     	
-            ReportsGenerationUtility.startDate = startDate;
-            ReportsGenerationUtility.endDate = endDate;
+			ReportsGenerationUtility.AUDIT_FILE_COMPANY_NAME = AUDIT_FILE_COMPANY_NAME;
+            ReportsGenerationUtility.selectedMonth = selectedMonth;
+            ReportsGenerationUtility.selectedYear = selectedYear;
+            
     		listOfSalesInvoices = (List<c2g__codaInvoice__c>)ReportsGenerationUtility.getSFDCRecordsWithSubQuery(objectName, 
-                                  fieldNameSet, whereCondition, hasSubquery, innerQueryObjAndFieldsMap);            
+                                  fieldNameSet, whereCondition, hasSubquery, innerQueryObjAndFieldsMap);     
+            System.debug('List of listOfSalesInvoices:' + listOfSalesInvoices);
             if(listOfSalesInvoices != null){
             	for(c2g__codaInvoice__c inv : listOfSalesInvoices){
                     if(inv.c2g__InvoiceLineItems__r != null)
@@ -937,114 +926,206 @@ public with sharing class GeneratePolandInvoicesReportController {
        
     private void getDataForAllEntriesReport(){
         Boolean hasSubquery = false;
-        String whereCondition =  'c2g__Transaction__r.c2g__TransactionDate__c >= :startDate and c2g__Transaction__r.c2g__TransactionDate__c <= :endDate';
         Set<String> fieldNameSet = new Set<String>();
         Set<String> setOfInnerQueryFields = new Set<String>();
         String objectName = ''; 
         Map<String, Set<String>> innerQueryObjAndFieldsMap = new Map<String, Set<String>>();
         
+        String whereCondition = 'c2g__Transaction__c != null and c2g__Transaction__r.c2g__Period__r.c2g__PeriodNumber__c = :selectedMonth' +
+                    			' AND c2g__Transaction__r.c2g__Period__r.c2g__YearName__r.Name = :selectedYear';
+        
+        if(String.isNotBlank(AUDIT_FILE_COMPANY_NAME)){
+        	whereCondition += ' AND c2g__Transaction__r.c2g__OwnerCompany__r.Name = :AUDIT_FILE_COMPANY_NAME';
+        }
+           
         try{
+        	listOfPeriods = getPeriodsForQuery(selectedMonth); 
             fieldNameSet = getFieldNameSet(mappingRecordByDeveloperNameMap.get('KR_Dziennik1').MasterLabel);     
-            ReportsGenerationUtility.startDate = startDate;
-            ReportsGenerationUtility.endDate = endDate;
+            
+            ReportsGenerationUtility.AUDIT_FILE_COMPANY_NAME = AUDIT_FILE_COMPANY_NAME;
+            ReportsGenerationUtility.selectedMonth = selectedMonth;
+            ReportsGenerationUtility.selectedYear = selectedYear;
+            
+            
             listOfJournals = (List<c2g__codaJournal__c>)ReportsGenerationUtility.getSFDCRecordsWithSubQuery('c2g__codaJournal__c', 
                              fieldNameSet, whereCondition, hasSubquery, innerQueryObjAndFieldsMap);
-                             
+            System.debug('List of listOfJournals:' + listOfJournals);              
+            
             objectName = 'c2g__codaTransaction__c';
             fieldNameSet = new Set<String>();
             fieldNameSet.add('Name');
-            whereCondition = 'c2g__TransactionDate__c >= :startDate and c2g__TransactionDate__c <= :endDate';
+  
+			whereCondition = 'c2g__Period__r.c2g__YearName__r.Name = :selectedYear' +
+                			 ' AND c2g__Period__r.c2g__PeriodNumber__c IN :listOfPeriods';
+            
+            if(String.isNotBlank(AUDIT_FILE_COMPANY_NAME)){
+                    whereCondition += ' AND c2g__OwnerCompany__r.Name = :AUDIT_FILE_COMPANY_NAME';
+            }
 			hasSubquery = true;
 			setOfInnerQueryFields = getFieldNameSet(mappingRecordByDeveloperNameMap.get('KR_KontoZapis1').MasterLabel);  
+			setOfInnerQueryFields.addAll(getFieldNameSet(mappingRecordByDeveloperNameMap.get('KR_ZOiS1').MasterLabel));
+			setOfInnerQueryFields.add('c2g__Transaction__r.c2g__Period__r.c2g__PeriodNumber__c'); 
+			setOfInnerQueryFields.add('c2g__Transaction__r.c2g__Period__r.c2g__YearName__r.Name'); 
+			setOfInnerQueryFields.add('c2g__HomeValue__c');
 			innerQueryObjAndFieldsMap.put(mappingRecordByDeveloperNameMap.get('KR_KontoZapis1').Object_Name__c, setOfInnerQueryFields);   
 			
-            ReportsGenerationUtility.startDate = startDate;
-            ReportsGenerationUtility.endDate = endDate;
+			ReportsGenerationUtility.AUDIT_FILE_COMPANY_NAME = AUDIT_FILE_COMPANY_NAME;
+            ReportsGenerationUtility.listOfPeriods = listOfPeriods;
+            ReportsGenerationUtility.selectedYear = selectedYear;
             listOfTransactions = (List<c2g__codaTransaction__c>)ReportsGenerationUtility.getSFDCRecordsWithSubQuery(objectName,
             													fieldNameSet, whereCondition, hasSubquery, innerQueryObjAndFieldsMap);
-    		getGLAInfo();
+   			if(listOfTransactions != null && !listOfTransactions.isEmpty()){
+	   			setGLABalancesInfo();
+	    		setGLAInfo();
+   			}
+   
         }catch(Exception e){
             ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, e.getMessage() + ' ' + e.getStackTraceString()));
         }                 
     }
     
-    private void getGLAInfo(){
-    	try{
-    		String objectName = mappingRecordByDeveloperNameMap.get('KR_ZOiS1').Object_Name__c;
-            Set<String> fieldNameSet = getFieldNameSet(mappingRecordByDeveloperNameMap.get('KR_ZOiS1').MasterLabel);
-            Boolean hasInnerQuery = true;
-            String whereCondition = '';
-            Set<String> setOfInnerQueryFields = new Set<String>();
-       		Map<String, Set<String>> innerQueryObjAndFieldsMap = new Map<String, Set<String>>();  
-			
-			setOfInnerQueryFields.add('c2g__Transaction__r.c2g__Period__r.c2g__PeriodNumber__c'); 
-			setOfInnerQueryFields.add('c2g__HomeValue__c');      
-			innerQueryObjAndFieldsMap.put('c2g__TransactionLineItems__r', setOfInnerQueryFields);     
-            
-            listOfGLAs = (List<c2g__codaGeneralLedgerAccount__c>)ReportsGenerationUtility.getSFDCRecordsWithSubQuery(objectName,
-                                                                 fieldNameSet, whereCondition, hasInnerQuery, innerQueryObjAndFieldsMap);                                                                
-    	}catch(Exception e){
-    		ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, e.getMessage() + ' ' + e.getStackTraceString()));
+    // Can be added to Reports Generation Utility class
+    private List<String> getPeriodsForQuery(String selectedPeriod){
+       String period;
+       Integer indexOfPeriod;
+       List<String> listOfPeriodsForQuery = new List<String>();   
+       listOfPeriodMonths = new List<String>();
+       
+        for(SelectOption selOp : periodOptions){
+            listOfPeriodMonths.add(selOp.getValue());
+        }
+       	indexOfPeriod = listOfPeriodMonths.indexOf(selectedPeriod);
+        for(Integer i=0; i<=indexOfPeriod; i++){
+            period = listOfPeriodMonths.get(i);
+            listOfPeriodsForQuery.add(period);
+        }
+        return listOfPeriodsForQuery;
+   }
+   
+    // To get balances on GLAs
+    private void setGLABalancesInfo(){
+    	mapOfOpeningBal = new Map<String, String>(); 
+		mapOfClosingBal = new Map<String, String>(); 
+		mapOfDebitsForReportingPeriod = new Map<String, String>();
+		mapOfCreditsForReportingPeriod = new Map<String, String>();
+		mapOfDbFromBeginingToEnd = new Map<String, String>(); 
+		mapOfCrFromBeginingToEnd = new Map<String, String>(); 
+		
+	    if(listOfTransactions != null){
+	    	for(c2g__codaTransaction__c trn : listOfTransactions){	    	
+		    	if(trn.c2g__TransactionLineItems__r != null){                    
+                    for(c2g__codaTransactionLineItem__c trnLine : trn.c2g__TransactionLineItems__r){
+                    	String repCode = ReportsGenerationUtility.getValue(trnLine, mappingRecordByDeveloperNameMap.get('KR_ZOiS1').SFDC_Field_Name__c);          
+	                    Decimal lineItemHomeValue = Decimal.valueOf(ReportsGenerationUtility.getValue(trnLine, 'c2g__HomeValue__c'));
+	                    String periodMonth = ReportsGenerationUtility.getValue(trnLine, 'c2g__Transaction__r.c2g__Period__r.c2g__PeriodNumber__c');
+	                  
+	                    if(periodMonth != selectedMonth){
+	                    	setOpeningBalances(repCode, lineItemHomeValue);
+	                    }else{
+	                    	calculateCurrentPeriodBal(repCode, lineItemHomeValue);
+	                    }
+	                    setClosingBalances(repCode, lineItemHomeValue);              		
+                    }                
+		    	}	    	
+	    	}
+	    }  
+   	}
+  	
+	private void setOpeningBalances(String repCode, Decimal homeVal){
+        Decimal updatedHomeVal = 0.0;
+   		if(String.isNotBlank(repCode)){				
+   			updatedHomeVal = (mapOfOpeningBal.get(repCode) != null) ? Decimal.valueOf(mapOfOpeningBal.get(repCode)) + homeVal : homeVal;
+	        mapOfOpeningBal.put(repCode, String.valueOf(updatedHomeVal));
+   		}
+	}
+	
+	private void setClosingBalances(String repCode, Decimal homeVal){
+        Decimal updatedHomeVal = 0.0;
+		if(String.isNotBlank(repCode)){				
+   			updatedHomeVal = (mapOfClosingBal.get(repCode) != null) ? Decimal.valueOf(mapOfClosingBal.get(repCode)) + homeVal : homeVal;
+	        mapOfClosingBal.put(repCode, String.valueOf(updatedHomeVal));
+	        
+	        if(homeVal >= 0){
+	   			updatedHomeVal = (mapOfDbFromBeginingToEnd.get(repCode) != null) ? Decimal.valueOf(mapOfDbFromBeginingToEnd.get(repCode)) + homeVal : homeVal;
+		        mapOfDbFromBeginingToEnd.put(repCode, String.valueOf(updatedHomeVal));	
+   			}else{
+   				updatedHomeVal = (mapOfCrFromBeginingToEnd.get(repCode) != null) ? Decimal.valueOf(mapOfCrFromBeginingToEnd.get(repCode)) + homeVal : homeVal;
+		        mapOfCrFromBeginingToEnd.put(repCode, String.valueOf(updatedHomeVal));	
+   			}
+   		}
+	}
+	
+	private void calculateCurrentPeriodBal(String repCode, Decimal homeVal){
+        Decimal updatedHomeVal = 0.0;
+		if(String.isNotBlank(repCode)){				
+	        if(homeVal >= 0){
+	   			updatedHomeVal = (mapOfDebitsForReportingPeriod.get(repCode) != null) ? Decimal.valueOf(mapOfDebitsForReportingPeriod.get(repCode)) + homeVal : homeVal;
+		        mapOfDebitsForReportingPeriod.put(repCode, String.valueOf(updatedHomeVal));	
+   			}else{
+   				updatedHomeVal = (mapOfCreditsForReportingPeriod.get(repCode) != null) ? Decimal.valueOf(mapOfCreditsForReportingPeriod.get(repCode)) + homeVal : homeVal;
+		        mapOfCreditsForReportingPeriod.put(repCode, String.valueOf(updatedHomeVal));	
+   			}
+   		}
+	}
+	
+   	private void setGLAInfo(){
+  		String kodKonta, opisKonta, typKonta, kodZespolu, opisZespolu, kodKategorii, opisKategorii; 
+    	String fieldName = mappingRecordByDeveloperNameMap.get('KR_ZOiS1').SFDC_Field_Name__c;					
+    	String glaReportingCode = '';
+    	mapOfGlaInfo = new Map<String, glaForAllEntriesWrapper>();
+    	
+    	if(listOfTransactions !=  null){
+    		for(c2g__codaTransaction__c trn : listOfTransactions){
+                if(trn.c2g__TransactionLineItems__r != null){
+                	for(c2g__codaTransactionLineItem__c trli : trn.c2g__TransactionLineItems__r){	
+                		glaReportingCode = ReportsGenerationUtility.getValue(trli, fieldName);	
+                		if(String.isNotBlank(glaReportingCode)){ 
+                			kodKonta = glaReportingCode;
+				    		opisKonta = ReportsGenerationUtility.getValue(trli, mappingRecordByDeveloperNameMap.get('KR_ZOiS2').SFDC_Field_Name__c);
+				    		typKonta = ReportsGenerationUtility.getValue(trli, mappingRecordByDeveloperNameMap.get('KR_ZOiS3').SFDC_Field_Name__c);
+				    		kodZespolu = ReportsGenerationUtility.getValue(trli, mappingRecordByDeveloperNameMap.get('KR_ZOiS4').SFDC_Field_Name__c);
+				    		opisZespolu = ReportsGenerationUtility.getValue(trli, mappingRecordByDeveloperNameMap.get('KR_ZOiS5').SFDC_Field_Name__c);
+				    		kodKategorii = ReportsGenerationUtility.getValue(trli, mappingRecordByDeveloperNameMap.get('KR_ZOiS6').SFDC_Field_Name__c);	
+				    		opisKategorii = ReportsGenerationUtility.getValue(trli, mappingRecordByDeveloperNameMap.get('KR_ZOiS7').SFDC_Field_Name__c);
+				    		
+                			if(mapOfGlaInfo.get(glaReportingCode) == null){
+			    				mapOfGlaInfo.put(glaReportingCode, new glaForAllEntriesWrapper(kodKonta, opisKonta, typKonta, kodZespolu, 
+			    																	opisZespolu, kodKategorii, opisKategorii));
+			    			}
+                		} 
+                	}
+                }
+    		}
     	}
     }
-    
-    // To get Credit Notes for Sales FA Report 
-    private void getCreditNotesForSalesReport(){
-        Boolean hasSubquery = true; 
-      	String whereCondition =  'c2g__Transaction__c != null and c2g__Transaction__r.c2g__TransactionDate__c >= :startDate ' +
-      						     'and c2g__Transaction__r.c2g__TransactionDate__c <= :endDate';            
-        Set<String> fieldNameSet = new Set<String>();
-        Set<String> setOfInnerQueryFields = new Set<String>();
-        Map<String, Set<String>> innerQueryObjAndFieldsMap = new Map<String, Set<String>>();
-        
-        try{
-            fieldNameSet = getFieldNameSet(mappingRecordByDeveloperNameMap.get('FakturaCreditNote0').MasterLabel);
-            fieldNameSet.addAll(getFieldNameSet(mappingRecordByDeveloperNameMap.get('Faktura1').MasterLabel));
-            fieldNameSet.remove('c2g__InvoiceTotal__c');
-            fieldNameSet.add('c2g__Transaction__c');
-	        fieldNameSet.add('c2g__TaxCode1__c');
-	        fieldNameSet.add('c2g__TaxCode2__c');
-	        fieldNameSet.add('c2g__TaxCode3__c');
-	        fieldNameSet.add('c2g__Account__r.Primary_Country__c');
-            setOfInnerQueryFields = getFieldNameSet(mappingRecordByDeveloperNameMap.get('FakturaCreditNoteLines0').MasterLabel);
-            innerQueryObjAndFieldsMap.put(mappingRecordByDeveloperNameMap.get('FakturaCreditNoteLines0').Object_Name__c, setOfInnerQueryFields);              
-            
-            ReportsGenerationUtility.startDate = startDate;
-            ReportsGenerationUtility.endDate = endDate;
-            listOfCreditNotes = (List<c2g__codaCreditNote__c>)ReportsGenerationUtility.getSFDCRecordsWithSubQuery(mappingRecordByDeveloperNameMap.get('FakturaCreditNote0').Object_Name__c, 
-  								fieldNameSet, whereCondition, hasSubquery, innerQueryObjAndFieldsMap);
-            
-            if(listOfCreditNotes != null){
-                for(c2g__codaCreditNote__c inv : listOfCreditNotes){
-                    if(inv.c2g__CreditNoteLineItems__r != null)
-                        listOfCreditNotesLines.addAll(inv.c2g__CreditNoteLineItems__r);
-                }
-            }
-        }catch(Exception e){
-            ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, e.getMessage() + ' ' + e.getStackTraceString()));
-        } 
-    }
-    
+   
     //To get purchase invoices for VAT Report
     private void getPurchaseInvForVATReport(){
         Boolean hasSubquery = true;
-        String whereCondition =  'c2g__Transaction__c != null and c2g__Transaction__r.c2g__TransactionDate__c >= :startDate ' +
-      						     'and c2g__Transaction__r.c2g__TransactionDate__c <= :endDate' + 
-     							 ' and (c2g__TaxCode1__c != null)';
+        String whereCondition = '';
         Set<String> fieldNameSet = new Set<String>();
         Set<String> setOfInnerQueryFields = new Set<String>();
         Map<String, Set<String>> innerQueryObjAndFieldsMap = new Map<String, Set<String>>();
         
+        whereCondition = 'c2g__Transaction__c != null and c2g__Transaction__r.c2g__Period__r.c2g__PeriodNumber__c = :selectedMonth' +
+                    	 ' AND c2g__Transaction__r.c2g__Period__r.c2g__YearName__r.Name = :selectedYear' +
+            			 ' AND (c2g__TaxCode1__c != null or c2g__TaxCode2__c != null or c2g__TaxCode3__c != null)';
+        
+        if(String.isNotBlank(AUDIT_FILE_COMPANY_NAME)){
+        	whereCondition += ' AND c2g__Transaction__r.c2g__OwnerCompany__r.Name = :AUDIT_FILE_COMPANY_NAME';
+        }       
+    
         try{
             fieldNameSet.add('c2g__Transaction__c');       
             setOfInnerQueryFields = getFieldNameSet(mappingRecordByDeveloperNameMap.get('VAT_ZakupWiersz0').MasterLabel);
             innerQueryObjAndFieldsMap.put(mappingRecordByDeveloperNameMap.get('VAT_ZakupWiersz0').Object_Name__c, setOfInnerQueryFields);    
            
-            ReportsGenerationUtility.startDate = startDate;
-            ReportsGenerationUtility.endDate = endDate;
+            ReportsGenerationUtility.AUDIT_FILE_COMPANY_NAME = AUDIT_FILE_COMPANY_NAME;
+            ReportsGenerationUtility.selectedMonth = selectedMonth;
+            ReportsGenerationUtility.selectedYear = selectedYear;
             listOfPurchaseInvoicesForVATReport = (List<c2g__codaPurchaseInvoice__c>)ReportsGenerationUtility.getSFDCRecordsWithSubQuery('c2g__codaPurchaseInvoice__c', 
                                             fieldNameSet, whereCondition, hasSubquery, innerQueryObjAndFieldsMap);
-    
+
             if(listOfPurchaseInvoicesForVATReport != null){
                 for(c2g__codaPurchaseInvoice__c purchInv : listOfPurchaseInvoicesForVATReport){
                     if(purchInv.c2g__PurchaseInvoiceLineItems__r != null)
@@ -1056,6 +1137,27 @@ public with sharing class GeneratePolandInvoicesReportController {
         }       
     }
 
+	public class glaForAllEntriesWrapper{
+    	public String kodKonta; //gla reporting code
+    	public String opisKonta;
+    	public String typKonta; 
+    	public String kodZespolu;
+    	public String opisZespolu; 
+    	public String kodKategorii; 
+    	public String opisKategorii; 
+    	
+    	public glaForAllEntriesWrapper(String kodKonta, String opisKonta, String typKonta, String kodZespolu,
+    							 String opisZespolu, String kodKategorii, String opisKategorii) {
+            this.kodKonta = kodKonta;
+            this.opisKonta = opisKonta;
+            this.typKonta = typKonta;
+            this.kodZespolu = kodZespolu;
+            this.opisZespolu = opisZespolu;
+            this.kodKategorii = kodKategorii;
+            this.opisKategorii = opisKategorii;
+        } 	
+    }
+    
     private Set<String> getFieldNameSet(String parentTagName){
 		Set<String> fieldNameSet = new Set<String>();
 		List<Poland_Invoices_File_Mapping__mdt> mappingRecordList = mappingRecordByLabelMap.get(parentTagName);
