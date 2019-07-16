@@ -1,6 +1,6 @@
-public class CreateFormulafieldController {  
-	public static final String FIRST_FIELD = 'SCMC__Total_Cost__c';
-    public static final String SECOND_FIELD = 'SCMC__Amount_Vouchered__c';
+public with sharing class CreateFormulafieldController {
+public static final String FIRST_FIELD = 'SCMC_Total_Cost__c';
+    public static final String SECOND_FIELD = 'SCMC_Amount_Vouchered__c';
     public static final String FIELD_NAME = 'Uninvoiced';
     public static final String FIELD_LABEL = 'Uninvoiced';
     public static final String FIELD_API_NAME = 'Uninvoiced__c';
@@ -38,6 +38,25 @@ public class CreateFormulafieldController {
         }catch(Exception e){
             System.debug('Error while creating formula field!' + e.getMessage());
         }     
+    }
+    
+     public static void createNumberField()
+    {
+        MetadataService.MetadataPort metadataservice = new MetadataService.MetadataPort();
+        metadataservice.SessionHeader = new MetadataService.SessionHeader_element();
+        metadataservice.SessionHeader.sessionId = UserInfo.getSessionId();
+
+        MetadataService.CustomField customField = new MetadataService.CustomField();
+        customField.fullName = 'Test__c.SCMC_Total_Cost__c';
+        customField.label = 'SCMC Total Cost';
+        customField.type_x = 'Number';
+        customField.scale = 2;
+        customField.precision = 18;
+  
+        List<MetadataService.SaveResult> results =
+            metadataservice.createMetadata(
+                new MetadataService.Metadata[] { customField });
+        handleSaveResults(results[0]);
     }
  
     public static void handleSaveResults(MetadataService.SaveResult saveResult)
