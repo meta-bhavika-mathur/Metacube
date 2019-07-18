@@ -36,7 +36,9 @@ public with sharing class GenerateLTReportXMLController {
    	private final String ISAF_REPORT_NAME = 'iSAF Report';
     private final String SAFT_REPORT_NAME = 'SAF-T Report';
     private final String CUSTOM_EXCEPTION_MESSAGE = 'Please select a report type!';
-    
+    private Date startDate{get; set;}
+	private Date endDate{get; set;}
+
 	public String docLink{get; set;}    
     public String fileType{get; set;}
     
@@ -117,8 +119,33 @@ public with sharing class GenerateLTReportXMLController {
             	ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, e.getMessage() + e.getStackTraceString()));
         }
     }
+
+	private void getStartEndDate (){
+		startDate = Date.today();
+		List<c2g__codaPeriod__c> periodsList = new List<c2g__codaPeriod__c>();
+		periodsList =	[ SELECT	
+					Id,
+					c2g__PeriodNumber__c,
+					c2g__StartDate__c,
+					c2g__EndDate__c
+			FROM	c2g__codaPeriod__c
+			WHERE c2g__PeriodNumber__c IN :periodMonthList and c2g__YearName__r.Name IN :periodYearList
+                         and c2g__OwnerCompany__r.Id IN :listOfSelectedCompanies
+					];
+		for(c2g__codaPeriod__c period : periodsList){
+			if(period.c2g__StartDate__c < startDate){
+				startDate = period.c2g__StartDate__c;
+			}
+			if(endDate != null && period.c2g__EndDate__c > endDate){
+				endDate = period.c2g__EndDate__c;
+            }else if (endDate == null){
+                endDate = period.c2g__EndDate__c;
+			}
+		}
+	}
     
     private void createISAF_Report(){
+		getStartEndDate();
         getSalesInvoices();
         getPurchaseInvoices();        
         String iSAFFileTagValue = getiSAFFileTagBody();
@@ -141,12 +168,15 @@ public with sharing class GenerateLTReportXMLController {
     private String getHeader(){	
 		String headerTagBody = '';
         String fileDescriptionBody = '';
+		Datetime genDate = System.now();
+		String genDateFormat = genDate.format('yyyy-MM-dd\'T\'HH:mm:ss');
+
         try{
                 fileDescriptionBody = addNode(mappingRecordByDeveloperNameMap.get('Header0').Tag_Name__c,
                                         addNode(mappingRecordByDeveloperNameMap.get('FileDescription1').Tag_Name__c, 
                                                 mappingRecordByDeveloperNameMap.get('FileDescription1').Default_Value__c)  +
                                         addNode(mappingRecordByDeveloperNameMap.get('FileDescription2').Tag_Name__c, 
-                                               String.valueOf(System.now()))  +
+                                               genDateFormat)  +
                                         addNode(mappingRecordByDeveloperNameMap.get('FileDescription3').Tag_Name__c, 
                                                 mappingRecordByDeveloperNameMap.get('FileDescription3').Default_Value__c)  +
                                         addNode(mappingRecordByDeveloperNameMap.get('FileDescription4').Tag_Name__c, 
@@ -160,7 +190,10 @@ public with sharing class GenerateLTReportXMLController {
                                         addNode(mappingRecordByDeveloperNameMap.get('FileDescription8').Tag_Name__c, 
                                                 mappingRecordByDeveloperNameMap.get('FileDescription8').Default_Value__c)  +		
                                         addNode(mappingRecordByDeveloperNameMap.get('FileDescription9').Tag_Name__c, 
-                                                mappingRecordByDeveloperNameMap.get('FileDescription9').Default_Value__c)	 		
+                                                mappingRecordByDeveloperNameMap.get('FileDescription9').Default_Value__c)  +
+										addNode(mappingRecordByDeveloperNameMap.get('FileDescription10').Tag_Name__c, 
+                                           addNode(mappingRecordByDeveloperNameMap.get('SelectionCriteria1').Tag_Name__c, String.valueOf(startDate)) 
+                                           + addNode(mappingRecordByDeveloperNameMap.get('SelectionCriteria2').Tag_Name__c, String.valueOf(endDate))) 		
                                      );	
             	headerTagBody = addNode(mappingRecordByDeveloperNameMap.get('iSAFFile2').Tag_Name__c, fileDescriptionBody); 
         }catch(Exception e){ 	
@@ -241,9 +274,13 @@ public with sharing class GenerateLTReportXMLController {
         String accInfo = '';
         try{
                 if(acc != null){
+                    String defaultValVatReg = mappingRecordByDeveloperNameMap.get('Supplier2').Default_Value__c;
+                    acc.VATRegNo = (acc.VATRegNo == '') ? defaultValVatReg : '' ;
+                    String defaultValReg = mappingRecordByDeveloperNameMap.get('Supplier3').Default_Value__c;
+                    acc.regNo = (acc.regNo == '') ? defaultValReg : '' ;
                     accInfo = addNode(mappingRecordByDeveloperNameMap.get('Supplier1').Tag_Name__c, acc.accountId) + 
-                              addNode(mappingRecordByDeveloperNameMap.get('Supplier2').Tag_Name__c, acc.regNo) +
-                              addNode(mappingRecordByDeveloperNameMap.get('Supplier3').Tag_Name__c, acc.VATRegNo) + 
+                              addNode(mappingRecordByDeveloperNameMap.get('Supplier2').Tag_Name__c, acc.VATRegNo) +
+                              addNode(mappingRecordByDeveloperNameMap.get('Supplier3').Tag_Name__c, acc.regNo) + 
                               addNode(mappingRecordByDeveloperNameMap.get('Supplier4').Tag_Name__c, acc.country) + 
                               addNode(mappingRecordByDeveloperNameMap.get('Supplier5').Tag_Name__c, acc.accName);      
                 }     
@@ -283,6 +320,11 @@ public with sharing class GenerateLTReportXMLController {
         String accInfo = '';
         try{
             if(acc != null){
+                String defaultValVatReg = mappingRecordByDeveloperNameMap.get('Customer2').Default_Value__c;
+                acc.VATRegNo = (acc.VATRegNo == '') ? defaultValVatReg : '' ;
+                String defaultValReg = mappingRecordByDeveloperNameMap.get('Customer3').Default_Value__c;
+                acc.regNo = (acc.regNo == '') ? defaultValReg : '' ;
+
                 accInfo = addNode(mappingRecordByDeveloperNameMap.get('Customer1').Tag_Name__c, acc.accountId) + 
                          addNode(mappingRecordByDeveloperNameMap.get('Customer2').Tag_Name__c, acc.VATRegNo) +
                          addNode(mappingRecordByDeveloperNameMap.get('Customer3').Tag_Name__c, acc.regNo) + 
@@ -305,15 +347,15 @@ public with sharing class GenerateLTReportXMLController {
                                             addNode(mappingRecordByDeveloperNameMap.get('Invoice0').Tag_Name__c, 
                                             ReportsGenerationUtility.getValue(mapOfSalesInvoices.get(salesInvId), mappingRecordByDeveloperNameMap.get('Invoice0').SFDC_Field_Name__c )) +
                                             addNode(mappingRecordByDeveloperNameMap.get('salesInvoice2').Tag_Name__c, addCustomerOnSalesInvoice(salesInvId)) + 
-                                            addNode(mappingRecordByDeveloperNameMap.get('Invoice2').Tag_Name__c, 
-                                            ReportsGenerationUtility.getValue(mapOfSalesInvoices.get(salesInvId), mappingRecordByDeveloperNameMap.get('Invoice2').SFDC_Field_Name__c )) +
-                                            addNode(mappingRecordByDeveloperNameMap.get('Invoice3').Tag_Name__c, mappingRecordByDeveloperNameMap.get('Invoice3').Default_Value__c ) +
-                                            addNode(mappingRecordByDeveloperNameMap.get('Invoice4').Tag_Name__c, ' ' ) +
-                                            addNode(mappingRecordByDeveloperNameMap.get('Invoice5').Tag_Name__c, ' ' ) +
-                                            addNodeWithAttributes(mappingRecordByDeveloperNameMap.get('Invoice6').Tag_Name__c,
-                                            '', getMapOfAttributesAndValByLabel(mappingRecordByDeveloperNameMap.get('Invoice6').MasterLabel, null))	+
-                                            addNode(mappingRecordByDeveloperNameMap.get('Invoice7').Tag_Name__c, ' ') +
-                                            addNode(mappingRecordByDeveloperNameMap.get('Invoice8').Tag_Name__c, getAllDocumentTotal(mapOfSalesInvoices.get(salesInvId)))						 
+                                            addNode(mappingRecordByDeveloperNameMap.get('salesInvoice3').Tag_Name__c, 
+                                            ReportsGenerationUtility.getValue(mapOfSalesInvoices.get(salesInvId), mappingRecordByDeveloperNameMap.get('salesInvoice3').SFDC_Field_Name__c )) +
+                                            addNode(mappingRecordByDeveloperNameMap.get('salesInvoice4').Tag_Name__c, mappingRecordByDeveloperNameMap.get('salesInvoice4').Default_Value__c ) +
+                                            addNode(mappingRecordByDeveloperNameMap.get('salesInvoice5').Tag_Name__c, ' ' ) +
+                                            addNode(mappingRecordByDeveloperNameMap.get('salesInvoice6').Tag_Name__c, ' ' ) +
+                                            addNodeWithAttributes(mappingRecordByDeveloperNameMap.get('salesInvoice7').Tag_Name__c,
+                                            '', getMapOfAttributesAndValByLabel(mappingRecordByDeveloperNameMap.get('salesInvoice7').MasterLabel, null))	+
+                                            addNode(mappingRecordByDeveloperNameMap.get('salesInvoice9').Tag_Name__c, ' ') +
+                                            addNode(mappingRecordByDeveloperNameMap.get('salesInvoice8').Tag_Name__c, getAllDocumentTotal(mapOfSalesInvoices.get(salesInvId)))						 
                                      ); 
                     }                          
             }	
@@ -432,6 +474,10 @@ public with sharing class GenerateLTReportXMLController {
     private void getPurchaseInvoices(){
         try{ 
            		Set<String> fieldNameSet = new Set<String>(); 
+            	List<String> tagNameList = new List<String>();
+                tagNameList.add('Customer');
+                tagNameList.add('Invoice');
+             	fieldNameSet.addAll(getFieldNameSet(tagNameList));
             	String whereCondition = 'c2g__Transaction__c != null and c2g__Transaction__r.c2g__Period__r.c2g__PeriodNumber__c IN :periodMonthList' +
                     					' AND c2g__Transaction__r.c2g__Period__r.c2g__YearName__r.Name IN :periodYearList';
                 
@@ -472,7 +518,12 @@ public with sharing class GenerateLTReportXMLController {
 
     private void getSalesInvoices(){    
         try{
-            	Set<String> fieldNameSet = new Set<String>();            	
+            	Set<String> fieldNameSet = new Set<String>();  
+                List<String> tagNameList = new List<String>();
+                tagNameList.add('Customer');
+                tagNameList.add('salesInvoice');
+             	fieldNameSet.addAll(getFieldNameSet(tagNameList));
+
             	String whereCondition = 'c2g__Transaction__c != null and c2g__Transaction__r.c2g__Period__r.c2g__PeriodNumber__c IN :periodMonthList' +
                     					' AND c2g__Transaction__r.c2g__Period__r.c2g__YearName__r.Name IN :periodYearList';
                 
@@ -512,6 +563,7 @@ public with sharing class GenerateLTReportXMLController {
     }
     
     private void createSAFT_Report(){
+		getStartEndDate();
     	setSAFTReportData();
         String auditFileTagValue = getAuditFileTagBody();
         xmlFileString = '';
@@ -544,6 +596,8 @@ public with sharing class GenerateLTReportXMLController {
                                 mappingRecordByDeveloperNameMap.get('SAFT_Header5').Default_Value__c ) +
     						   	addNode(mappingRecordByDeveloperNameMap.get('SAFT_Header6').Tag_Name__c, 
     						    mappingRecordByDeveloperNameMap.get('SAFT_Header6').Default_Value__c ) +
+								addNode(mappingRecordByDeveloperNameMap.get('SAFT_Header7').Tag_Name__c, String.valueOf(startDate)) +
+   	  							addNode(mappingRecordByDeveloperNameMap.get('SAFT_Header8').Tag_Name__c, String.valueOf(endDate)) +
     						   	addNode(mappingRecordByDeveloperNameMap.get('SAFT_Header9').Tag_Name__c, 
 	    							addNode(mappingRecordByDeveloperNameMap.get('SAFT_Header_CmpnyAddInfo1').Tag_Name__c, 
 	    						   	mappingRecordByDeveloperNameMap.get('SAFT_Header_CmpnyAddInfo1').Default_Value__c) + 
@@ -1391,6 +1445,19 @@ public with sharing class GenerateLTReportXMLController {
 				fieldNameSet.add(item.SFDC_Field_Name__c);
 			}
 		}
+		return fieldNameSet;
+	}
+    private Set<String> getFieldNameSet(List<String> parentTagNameList){
+		Set<String> fieldNameSet = new Set<String>();
+        for(String parentTagName : parentTagNameList){
+            List<Lithuania_File_Mapping__mdt> mappingRecordList = mappingRecordByLabelMap.get(parentTagName);
+            for(Lithuania_File_Mapping__mdt item : mappingRecordList){
+                if(String.isNotBlank(item.SFDC_Field_Name__c)){
+                    fieldNameSet.add(item.SFDC_Field_Name__c);
+                }
+            }
+        }
+        System.debug('FieldsetName: '+fieldNameSet);
 		return fieldNameSet;
 	}
     
