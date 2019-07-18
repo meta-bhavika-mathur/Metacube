@@ -15,9 +15,6 @@ public with sharing class CreateFormulafieldController {
                     isObjectAvailable = true;
                     break;
                 }  
-                else {
-                    System.debug('SObject does not exists');
-                }
             }    
             if(isObjectAvailable == true) {
                 MetadataService.MetadataPort metadataservice = new MetadataService.MetadataPort();
@@ -35,7 +32,10 @@ public with sharing class CreateFormulafieldController {
                 List<MetadataService.SaveResult> results =metadataservice.createMetadata(new MetadataService.Metadata[] { customField });
                 listOfSavedResults.add(results[0]);
                 handleSaveResults(results[0]);    
-            }      
+            }
+            else {
+                System.debug('SObject does not exists');
+            }
         }
         catch(Exception e) {
             System.debug('Error while creating formula field!' + e.getMessage());
@@ -75,9 +75,12 @@ public with sharing class CreateFormulafieldController {
                  listOfSavedResults.add(results[0]);
                 handleSaveResults(results[0]);
             }
+            else {
+                System.debug('SObject does not exists');
+            }
         }
         catch(Exception e){
-            System.debug('Error while creating formula field!' + e.getMessage());
+            System.debug('Error while creating number field!' + e.getMessage());
         } 
     }    
     

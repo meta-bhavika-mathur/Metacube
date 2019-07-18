@@ -13,6 +13,27 @@ global class CreateFormulaFieldMock implements WebServiceMock {
             response_x.result=listOfResults;
             response.put('response_x', response_x); 
         }
+         else if(requests.contains('Test_Error__c')){
+            // generate error
+            List<MetadataService.Error> listOfError= new List<MetadataService.Error>();
+            List< MetadataService.SaveResult> listOfResults = new List< MetadataService.SaveResult>();
+            MetadataService.ExtendedErrorDetails extendederror = new MetadataService.ExtendedErrorDetails();
+            MetadataService.Error error = new MetadataService.Error();
+            extendederror.extendedErrorCode='TEST_ERROR';
+            List<MetadataService.ExtendedErrorDetails> listOfExtendedError = new List<MetadataService.ExtendedErrorDetails>();
+            listOfExtendedError.add(extendederror);
+            error.extendedErrorDetails=listOfExtendedError;
+            error.message='Error For Testing';
+            error.statusCode='#123';
+            error.fields=null;
+            listOfError.add(error);
+            saveresult.errors=listOfError;
+            saveresult.fullName=null;
+            saveresult.success=false; 
+            listOfResults.add(saveresult);
+            response_x.result=listOfResults;
+            response.put('response_x', response_x); 
+        } 
         else {
             List< MetadataService.SaveResult> listOfResults = new List< MetadataService.SaveResult>();
             Integer startIndex=requests.indexOf(', fullName=');
@@ -25,6 +46,6 @@ global class CreateFormulaFieldMock implements WebServiceMock {
             listOfResults.add(saveresult);
             response_x.result=listOfResults;
             response.put('response_x', response_x); 
-        }
+        }    
     }
 }
