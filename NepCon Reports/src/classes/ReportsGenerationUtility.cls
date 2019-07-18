@@ -4,13 +4,49 @@ public class ReportsGenerationUtility {
     public static Map<String, List<c2g__codaPeriod__c>> periodByYearMap;
     public static List<String> yearList;
 	public static List<String> monthList;
+    public static List<String> periodList;
 	public static List<SelectOption> yearOptions;
 	public static List<SelectOption> monthOptions;
+    public static List<SelectOption> periodOptions;
     public static Date startDate;
 	public static Date endDate;
+    public static String AUDIT_FILE_COMPANY_NAME;
     public static String periodYear;
     public static String periodMonth;
+    public static String selectedYear;
+    public static String selectedMonth;
+    
+    public static List<String> listOfPeriods;   
+    public static List<String> periodMonthList;
+    public static List<String> periodYearList; 
+    
     public static Set<String> setOfSalesIds = new Set<String>();
+    public static List<SelectOption> companyOptions;
+    public static List<String> listOfSelectedCompanies;
+    
+    // To get companies on Transaction
+    public static void setCompaniesForCountry(String countryName){    
+       companyOptions = new List<SelectOption>();
+       List<c2g__codaCompany__c> listOfCompanies = [ SELECT 
+       													Id, Name 
+       												 FROM c2g__codaCompany__c 
+       												 WHERE c2g__Country__c = :countryName
+       												 AND c2g__Country__c != null
+       											   ];
+       System.debug('List of companies in Reports Utilty:' + listOfCompanies);
+       
+       if(listOfCompanies != null && !listOfCompanies.isEmpty()){
+       	   listOfSelectedCompanies = new List<String>();
+          
+           System.debug('Default listOfSelectedCompanies:' + listOfSelectedCompanies);
+	       for(c2g__codaCompany__c cmpny : listOfCompanies){
+	       		String companyId = cmpny.Id;
+	       		String companyName = cmpny.Name;
+				companyOptions.add(new SelectOption(companyId, companyName));
+				listOfSelectedCompanies.add(companyId);
+			}
+       }     
+    }
     
     public static String generateDocAndAddToFolder(String fileName, String xmlFileString){        
         folderId = [
@@ -36,6 +72,7 @@ public class ReportsGenerationUtility {
 	}
     
     public static List<SObject> getSFDCRecords(String objName, Set<String> fieldNameSet, String whereCondition){
+		
 		if(!fieldNameSet.isEmpty()){
 			String query =	'SELECT ' + String.join(new List<String>(fieldNameSet), ',') + 
 							' FROM ' + objName +
@@ -50,6 +87,7 @@ public class ReportsGenerationUtility {
     
     public static List<sObject> getSFDCRecordsWithSubQuery(String objName, Set<String> fieldNameSet, String whereCondition,
                                 Boolean hasSubquery, Map<String, Set<String>> mapOfInnerQueryObjAndFields){
+             System.debug('listOfSelectedCompanies in query:' + listOfSelectedCompanies);
 			 String query = '';
              List<SObject> recordsList;
              Set<String> setOfFields;
@@ -139,16 +177,23 @@ public class ReportsGenerationUtility {
 
 		yearList = new List<String>(periodByYearMap.keySet());
 		monthList = new List<String>{'1','2','3','4','5','6','7','8','9','10','11','12'};
-
-		yearOptions = new List<SelectOption>();
+		
+        periodList = new List<String>{'000', '001','002','003','004','005','006','007','008','009','010','011','012', '100', '101'};
+		
+        yearOptions = new List<SelectOption>();
 		monthOptions = new List<SelectOption>();
-
-		for(String item : yearList){
+		periodOptions  = new List<SelectOption>();
+		
+        for(String item : yearList){
 			yearOptions.add(new SelectOption(item, item));
 		}
 
 		for(String item : monthList){
 			monthOptions.add(new SelectOption(item, item));
+		}
+        
+        for(String item : periodList){
+			periodOptions.add(new SelectOption(item, item));
 		}
 	}
 }

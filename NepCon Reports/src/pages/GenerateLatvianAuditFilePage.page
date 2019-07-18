@@ -25,16 +25,23 @@
         <div class="main-block">
             <div class="select-list-wrapper">
                 <span class="span-position">Choose Year:</span>
-                <apex:selectList disabled="false" value="{!periodYear}" styleClass="select-list">
+                <apex:selectList disabled="false" value="{!selectedYear}" styleClass="select-list">
                     <apex:selectOptions value="{!yearOptions}"></apex:selectOptions>
                 </apex:selectList>
             </div>
             <div class="select-list-wrapper">
                 <span class="span-position">Choose Month:</span>
-                <apex:selectList disabled="false" value="{!periodMonth}" styleClass="select-list">
-                    <apex:selectOptions value="{!monthOptions}"></apex:selectOptions>
+                <apex:selectList disabled="false" value="{!selectedMonth}" styleClass="select-list">
+                    <apex:selectOptions value="{!periodOptions}"></apex:selectOptions>
                 </apex:selectList>
             </div>
+            <div class="select-list-wrapper">
+            	<span class="span-position">Choose Company:</span>
+	            <br/>
+	            <apex:selectList multiselect="true" value="{!listOfSelectedCompanies}" styleClass="select-list">
+	            	<apex:selectOptions value="{!companyOptions}"></apex:selectOptions>
+	            </apex:selectList>
+	        </div>
             <div class="group">
                 <div class="generate-button">
                     <apex:commandButton action="{!createXML}" value="Create Latvian Audit Report" reRender="form" status="filePreparationStatus"/>

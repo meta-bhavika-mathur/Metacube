@@ -181,7 +181,7 @@ public class CreateTestData {
           c2g__StartDate__c = System.today().addMonths(-1),
           c2g__EndDate__c = System.today().addMonths(1),
           c2g__OwnerCompany__c = company.id,
-          c2g__PeriodNumber__c = '123',
+          c2g__PeriodNumber__c = '001',
           c2g__Description__c = 'Trading Period',
           c2g__YearName__c = yr.id
       );

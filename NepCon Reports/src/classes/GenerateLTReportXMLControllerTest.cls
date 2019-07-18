@@ -5,9 +5,11 @@ public class GenerateLTReportXMLControllerTest {
     private static void setupGeneralTestData() {
         try{
            GenerateReportsTestMethodsUtility.testSetup(); 
+           c2g__codaCompany__c cmpny = [SELECT Id, Name, c2g__Country__c FROM c2g__codaCompany__c LIMIT 1];
+           cmpny.c2g__Country__c = 'Lithuania';
+           update cmpny;
         }catch(Exception e){
-            System.debug('Exception in test setup:' + e.getStackTraceString());
-            System.debug('Exception Message:' + e.getMessage());
+            System.debug('Exception in test setup:' +  e.getMessage() + e.getStackTraceString());
         }     
     }
 	
@@ -19,9 +21,11 @@ public class GenerateLTReportXMLControllerTest {
             Integer lim = 10;
             CreateTestData.postInvoices(lim);
             CreateTestData.postPInvoices(lim);
+            List<c2g__codaTransaction__c> trnList = [select Name, c2g__OwnerCompany__r.Name, c2g__TransactionType__c, c2g__Period__r.c2g__YearName__r.Name, c2g__Period__r.c2g__PeriodNumber__c from c2g__codaTransaction__c];
+            
             GenerateLTReportXMLController generateLTReportController = new GenerateLTReportXMLController();
-            generateLTReportController.startDate = Date.today().addYears(-1);
-            generateLTReportController.endDate = Date.today();   
+            generateLTReportController.periodYearList = new List<String>{'2018', '2019', '2020', '2021'};
+            generateLTReportController.periodMonthList = new List<String>{'123', '000', '001','002','003','004','005','006','007','008','009','010','011','012', '100', '101'};
             generateLTReportController.fileType = 'report1';
             generateLTReportController.createXml();
             
@@ -39,9 +43,12 @@ public class GenerateLTReportXMLControllerTest {
             Integer lim = 10;           
             CreateTestData.postInvoices(lim);
             CreateTestData.postPInvoices(lim);
+            List<c2g__codaTransaction__c> trnList = [select Name, c2g__OwnerCompany__r.Name, c2g__TransactionType__c, c2g__Period__r.c2g__YearName__r.Name, c2g__Period__r.c2g__PeriodNumber__c from c2g__codaTransaction__c];
+
             GenerateLTReportXMLController generateLTReportController = new GenerateLTReportXMLController();
-            generateLTReportController.startDate = Date.today();
-            generateLTReportController.endDate = Date.today();   
+            generateLTReportController.periodOptions.add(0,  new SelectOption('123', '123'));
+            generateLTReportController.selectedYear = String.valueOf(Date.today().year());
+            generateLTReportController.selectedMonth = '123';   
             generateLTReportController.fileType = 'report2';
             generateLTReportController.createXml();
             
@@ -60,8 +67,9 @@ public class GenerateLTReportXMLControllerTest {
             CreateTestData.postInvoices(lim);
             CreateTestData.postPInvoices(lim);
             GenerateLTReportXMLController generateLTReportController = new GenerateLTReportXMLController();
-            generateLTReportController.startDate = Date.today() + 2;
-            generateLTReportController.endDate = Date.today();   
+            generateLTReportController.periodOptions.add(0, new SelectOption('123', '123'));
+            generateLTReportController.selectedYear = String.valueOf(Date.today().year());
+            generateLTReportController.selectedMonth = '007';   
             generateLTReportController.fileType = 'report2';
             generateLTReportController.createXml();
             
@@ -79,8 +87,8 @@ public class GenerateLTReportXMLControllerTest {
                 CreateTestData.postInvoices(lim);
             	CreateTestData.postPInvoices(lim);
                 GenerateLTReportXMLController generateLTReportController = new GenerateLTReportXMLController();
-                generateLTReportController.startDate = Date.today().addYears(-1);
-                generateLTReportController.endDate = Date.today();    
+                generateLTReportController.periodYearList = new List<String>{'2018', '2019', '2020', '2021'};
+            	generateLTReportController.periodMonthList = new List<String>{'123', '000', '001','002','003','004','005','006','007','008','009','010','011','012', '100', '101'};   
             	generateLTReportController.fileType = 'report1';
                 generateLTReportController.createXml();
                 
@@ -104,8 +112,8 @@ public class GenerateLTReportXMLControllerTest {
                 CreateTestData.postInvoices(lim);
             	CreateTestData.postPInvoices(lim);
                 GenerateLTReportXMLController generateLTReportController = new GenerateLTReportXMLController();
-                generateLTReportController.startDate = Date.today().addYears(-1);
-                generateLTReportController.endDate = Date.today();    
+                generateLTReportController.periodYearList = new List<String>{'2018', '2019', '2020', '2021'};
+            	generateLTReportController.periodMonthList = new List<String>{'123', '000', '001','002','003','004','005','006','007','008','009','010','011','012', '100', '101'};   
             	generateLTReportController.fileType = 'report1';
                 generateLTReportController.createXml();
                 

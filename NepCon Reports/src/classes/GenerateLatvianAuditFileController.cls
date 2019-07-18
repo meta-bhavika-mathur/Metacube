@@ -13,11 +13,12 @@ public class GenerateLatvianAuditFileController{
     final String CUSTOM_EXCEPTION_MESSAGE = 'Choose Year and Month';
     final String VAT_REPORT_NAME = 'Latvian Audit File';
     
-    public String periodYear{get; set;}
-	public String periodMonth{get; set;}
+    public String selectedYear{get; set;}
+	public String selectedMonth{get; set;}    
     public List<String> yearList{get; set;}
 	public List<String> monthList{get; set;}
 	public List<SelectOption> yearOptions{get; set;}
+	public List<SelectOption> periodOptions{get; set;}
 	public List<SelectOption> monthOptions{get; set;}
 	
 	private List<c2g__codaTransaction__c> listOfTransactions;
@@ -25,19 +26,31 @@ public class GenerateLatvianAuditFileController{
     @TestVisible
     private Set<transactionSalesInvWrapper> listOfTrnsctnSalesInv = new Set<transactionSalesInvWrapper>();
     
+    public String AUDIT_FILE_COUNTRY_NAME = '';
+  	public List<String> listOfSelectedCompanies{get; set;}     
+    public List<SelectOption> companyOptions{get; set;}
+     
     public GenerateLatvianAuditFileController(){
         try{
             getPeriods();
             getFieldMapping();
-            sortFieldMapping(mappingList);      
+            sortFieldMapping(mappingList);
+            AUDIT_FILE_COUNTRY_NAME = mappingRecordByDeveloperNameMap.get('AuditFileCountry0').Default_Value__c;      
+            getCompanies();      
         }catch(Exception e){
             ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, e.getMessage() + ' ' + e.getStackTraceString()));
         }
 	}
    
+    public void getCompanies(){		
+		ReportsGenerationUtility.setCompaniesForCountry(AUDIT_FILE_COUNTRY_NAME);
+		companyOptions = ReportsGenerationUtility.companyOptions;
+		listOfSelectedCompanies = ReportsGenerationUtility.listOfSelectedCompanies;
+	}
+	
     public void createXml(){
         try{	  
-        		if(String.isBlank(periodYear) || String.isBlank(periodMonth)){
+        		if(String.isBlank(selectedYear) || String.isBlank(selectedMonth) || (listOfSelectedCompanies == null || listOfSelectedCompanies.isEmpty())){
 					throw new CustomException(CUSTOM_EXCEPTION_MESSAGE);
 				}else{  	   
 	            	getTransactions(); 
@@ -60,8 +73,8 @@ public class GenerateLatvianAuditFileController{
     	try{
     		String precizejumsStr = addNode(mappingRecordByDeveloperNameMap.get('DokPVNv52').Tag_Name__c, 
                                         mappingRecordByDeveloperNameMap.get('DokPVNv52').Default_Value__c);
-	    	String parskGadsStr = addNode(mappingRecordByDeveloperNameMap.get('DokPVNv53').Tag_Name__c, periodYear);
-	    	String parskMenStr = addNode(mappingRecordByDeveloperNameMap.get('DokPVNv54').Tag_Name__c, periodMonth);
+	    	String parskGadsStr = addNode(mappingRecordByDeveloperNameMap.get('DokPVNv53').Tag_Name__c, selectedYear);
+	    	String parskMenStr = addNode(mappingRecordByDeveloperNameMap.get('DokPVNv54').Tag_Name__c, selectedMonth);
 	    	String mmrKodsStr = addNode(mappingRecordByDeveloperNameMap.get('DokPVNv55').Tag_Name__c, 
 	                                        mappingRecordByDeveloperNameMap.get('DokPVNv55').Default_Value__c);
 	    	String talrunisStr = addNode(mappingRecordByDeveloperNameMap.get('DokPVNv56').Tag_Name__c, 
@@ -248,7 +261,7 @@ public class GenerateLatvianAuditFileController{
      
     private void getTransactions(){	    	
     	Boolean hasSubquery = true;
-        String whereCondition = 'c2g__Period__r.c2g__YearName__r.Name = :periodYear';
+        String whereCondition;
         String objectName = '';
         Set<String> fieldNameSet = new Set<String>();
         Set<String> setOfInnerQueryFields = new Set<String>();
@@ -256,6 +269,13 @@ public class GenerateLatvianAuditFileController{
         listOfTransactions = new List<c2g__codaTransaction__c>();
         
         try{
+        	whereCondition = 'c2g__Period__r.c2g__PeriodNumber__c = :selectedMonth' +
+                    	 ' AND c2g__Period__r.c2g__YearName__r.Name = :selectedYear';
+            			 
+        	if(listOfSelectedCompanies != null && !listOfSelectedCompanies.isEmpty()){
+        			whereCondition += ' AND c2g__OwnerCompany__r.Id IN :listOfSelectedCompanies';
+        	}
+        	
             objectName = mappingRecordByDeveloperNameMap.get('PVN1I_1').Object_Name__c;
         	fieldNameSet = getFieldNameSet(mappingRecordByDeveloperNameMap.get('PVN1I_R1').MasterLabel);
         	fieldNameSet.addAll(getFieldNameSet(mappingRecordByDeveloperNameMap.get('PVN1II_R1').MasterLabel));
@@ -282,12 +302,13 @@ public class GenerateLatvianAuditFileController{
            									setOfInnerQueryFields);
            									
           
-           	ReportsGenerationUtility.periodYear = periodYear;
-            ReportsGenerationUtility.periodMonth = periodMonth;
+           	ReportsGenerationUtility.selectedMonth = selectedMonth;
+            ReportsGenerationUtility.selectedYear = selectedYear;
+            ReportsGenerationUtility.listOfSelectedCompanies = listOfSelectedCompanies;
  			listOfTransactions = (List<c2g__codaTransaction__c>)ReportsGenerationUtility.getSFDCRecordsWithSubQuery(objectName, 
                                      fieldNameSet, whereCondition, hasSubquery, innerQueryObjAndFieldsMap);
+    		System.debug('listOfTransactions:' + listOfTransactions);
     		setInvoicesInfo();
-    	//	setCreditNotesInfo();
     		setPurInvoicesInfo();
 			setPurchaseCreditNotesinfo();
         }catch(Exception e){
@@ -328,44 +349,6 @@ public class GenerateLatvianAuditFileController{
                         } 			
                     }
                 }
-	    }catch(Exception e){
-	     	ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, e.getMessage() + ' ' + e.getStackTraceString()));
-	    }  
-    }
-    
-    private void setCreditNotesInfo(){
-	    String accRegCountry, accVATRegNo, accName, invTotal, taxTotal, transType, transDocNum, transDate, transDocType; 
-	    final String ACC_COUNTRY = 'LV'; //Latvia
-	    try{
-	    	if(listOfTransactions != null){
-                for(c2g__codaTransaction__c trnsctn : listOfTransactions){
-                    accRegCountry = ReportsGenerationUtility.getValue(trnsctn, mappingRecordByDeveloperNameMap.get('PVN1I_R1').SFDC_Field_Name__c);
-                    if(trnsctn.c2g__CreditNotes__r != null && accRegCountry != null && accRegCountry == ACC_COUNTRY ){
-                            
-                            accVATRegNo = ReportsGenerationUtility.getValue(trnsctn, mappingRecordByDeveloperNameMap.get('PVN1I_R2').SFDC_Field_Name__c);
-                            accName = ReportsGenerationUtility.getValue(trnsctn, mappingRecordByDeveloperNameMap.get('PVN1I_R3').SFDC_Field_Name__c);
-                            transType = ReportsGenerationUtility.getValue(trnsctn, mappingRecordByDeveloperNameMap.get('PVN1I_R4').SFDC_Field_Name__c);
-                            transDocType = ReportsGenerationUtility.getValue(trnsctn, mappingRecordByDeveloperNameMap.get('PVN1I_R7').SFDC_Field_Name__c);
-                            transDocNum = ReportsGenerationUtility.getValue(trnsctn, mappingRecordByDeveloperNameMap.get('PVN1I_R8').SFDC_Field_Name__c);
-                            transDate = ReportsGenerationUtility.getValue(trnsctn, mappingRecordByDeveloperNameMap.get('PVN1I_R9').SFDC_Field_Name__c);
-                            
-                            for(c2g__codaCreditNote__c credNote : trnsctn.c2g__CreditNotes__r){
-                                invTotal = ReportsGenerationUtility.getValue(credNote, mappingRecordByDeveloperNameMap.get('creditNotesQuery1').SFDC_Field_Name__c);
-                                taxTotal = ReportsGenerationUtility.getValue(credNote, mappingRecordByDeveloperNameMap.get('creditNotesQuery2').SFDC_Field_Name__c);
-                                listOfTrnsctnSalesInv.add(new transactionSalesInvWrapper(
-                                                                 accRegCountry != null ? accRegCountry : '', 
-                                                                 accVATRegNo != null ? accVATRegNo : '',  
-                                                                 accName != null ? accName : '',  
-                                                                 transType != null ? transType : '', 
-                                                                 invTotal != null ? invTotal : '',  
-                                                                 taxTotal != null ? taxTotal : '',  
-                                                                 transDocType != null ? transDocType : '',  
-                                                                 transDocNum != null ? transDocNum : '',  
-                                                                 transDate != null ? transDate : '' ));	
-                            }
-                        } 			
-                    }
-	    	}
 	    }catch(Exception e){
 	     	ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, e.getMessage() + ' ' + e.getStackTraceString()));
 	    }  
@@ -524,9 +507,9 @@ public class GenerateLatvianAuditFileController{
 	}
 	
     public void getPeriods(){
-        ReportsGenerationUtility.getPeriods();
+		ReportsGenerationUtility.getPeriods();
         yearOptions = ReportsGenerationUtility.yearOptions;
-        monthOptions = ReportsGenerationUtility.monthOptions;
+        periodOptions = ReportsGenerationUtility.periodOptions;
 	}
     
 	@TestVisible
@@ -579,9 +562,7 @@ public class GenerateLatvianAuditFileController{
             this.transDocNum = transDocNum;
             this.transDate = transDate;
         }
-    }
-    
+    }   
     public class MissingCustomMDTMappingsException extends Exception{}
     public class CustomException extends Exception{}
-
 }

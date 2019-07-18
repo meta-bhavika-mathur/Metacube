@@ -25,54 +25,96 @@ public with sharing class GenerateLTReportXMLController {
     Map<String, String> mapOfReportingCodeOpeningCreditBal;
     Map<String, String> mapOfReportingCodeClosingDebitBal;
     Map<String, String> mapOfReportingCodeClosingCreditBal;
-    
-    
+
     @TestVisible
     private Map<String, wrapCustomerAccount> mapOfCustomerAccount;
     @TestVisible
     private Map<String, wrapSupplierAccount> mapOfSupplierAccount;	
 	private String xmlFileString;
 	private String folderId;
-    
+    public String AUDIT_FILE_COMPANY_NAME = '';
    	private final String ISAF_REPORT_NAME = 'iSAF Report';
     private final String SAFT_REPORT_NAME = 'SAF-T Report';
     private final String CUSTOM_EXCEPTION_MESSAGE = 'Please select a report type!';
     
 	public String docLink{get; set;}    
-    public Date startDate{get; set;}
-	public Date endDate{get; set;}
     public String fileType{get; set;}
+    
+    public List<String> periodYearList{get; set;}
+	public List<String> periodMonthList{get; set;}
+    public String selectedYear{get; set;}
+	public String selectedMonth{get; set;}
+    
+    public List<SelectOption> yearOptions{get; set;}
+    @TestVisible
+	public List<SelectOption> periodOptions{get; set;}
 	public List<SelectOption> fileTypeOptions{get; set;}
+    public Boolean fileTypeIsSelected{get; set;}
+    
+    public List<String> listOfPeriodMonths;
+    public List<String> listOfPeriods;
   
+  	public String AUDIT_FILE_COUNTRY_NAME = '';
+  	public List<String> listOfSelectedCompanies{get; set;}     
+    public List<SelectOption> companyOptions{get; set;}
+  	
     public GenerateLTReportXMLController(){
         try{
-            startDate = endDate = Date.today();
+            getPeriods();
             initFileTypes();
             getFieldMapping();
-            sortFieldMapping(mappingList);            
+            sortFieldMapping(mappingList); 
+            AUDIT_FILE_COUNTRY_NAME = mappingRecordByDeveloperNameMap.get('AuditFileCountry0').Default_Value__c;      
+            getCompanies();                 
         }catch(Exception e){
             ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, e.getMessage() + ' ' + e.getStackTraceString()));
         }
 	}
     
+    public void getCompanies(){		
+		ReportsGenerationUtility.setCompaniesForCountry(AUDIT_FILE_COUNTRY_NAME);
+		companyOptions = ReportsGenerationUtility.companyOptions;
+		listOfSelectedCompanies = ReportsGenerationUtility.listOfSelectedCompanies;
+	}
+	
+    public void selectFileType(){
+		fileTypeIsSelected = true;
+	}
+    
+    public PageReference checkChange() {
+        return null;
+    }
+    
     public void initFileTypes(){
 		fileTypeOptions = new List<SelectOption>();
 		fileTypeOptions.add(new SelectOption('report1', ISAF_REPORT_NAME));
 		fileTypeOptions.add(new SelectOption('report2', SAFT_REPORT_NAME));
+        fileType = 'report1';
 	}
- 
+
+    public void getPeriods(){
+		ReportsGenerationUtility.getPeriods();
+        yearOptions = ReportsGenerationUtility.yearOptions;
+        periodOptions = ReportsGenerationUtility.periodOptions;
+	}
+    
     public void createXml(){
         try{	 
-            	if(fileType == 'report1'){
-                    createISAF_Report();
-                }else if(fileType == 'report2'){                	
-                    createSAFT_Report();
+                if(fileType == 'report1'){
+                    if(periodYearList.isEmpty() || periodMonthList.isEmpty() || (listOfSelectedCompanies == null || listOfSelectedCompanies.isEmpty())){
+                		throw new CustomException('Choose Year, Month and Company!');
+                    }
+                    createISAF_Report();              
+                }else if(fileType == 'report2'){  
+                    if(String.isBlank(selectedYear) || String.isBlank(selectedMonth) || (listOfSelectedCompanies == null || listOfSelectedCompanies.isEmpty())){
+                		throw new CustomException('Choose Year, Month and Company!');
+                    }
+                    createSAFT_Report();                                   
                 }else{
                     throw new CustomException(CUSTOM_EXCEPTION_MESSAGE);
-                }
-            
+                }         
         }catch(Exception e){
-            	ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, e.getMessage()));
+            	ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, e.getMessage() + e.getStackTraceString()));
         }
     }
     
@@ -118,10 +160,7 @@ public with sharing class GenerateLTReportXMLController {
                                         addNode(mappingRecordByDeveloperNameMap.get('FileDescription8').Tag_Name__c, 
                                                 mappingRecordByDeveloperNameMap.get('FileDescription8').Default_Value__c)  +		
                                         addNode(mappingRecordByDeveloperNameMap.get('FileDescription9').Tag_Name__c, 
-                                                mappingRecordByDeveloperNameMap.get('FileDescription9').Default_Value__c)  +
-                                        addNode(mappingRecordByDeveloperNameMap.get('FileDescription10').Tag_Name__c, 
-                                            addNode(mappingRecordByDeveloperNameMap.get('SelectionCriteria1').Tag_Name__c, String.valueOf(startDate)) 
-                                            + addNode(mappingRecordByDeveloperNameMap.get('SelectionCriteria2').Tag_Name__c, String.valueOf(endDate))) 		 		
+                                                mappingRecordByDeveloperNameMap.get('FileDescription9').Default_Value__c)	 		
                                      );	
             	headerTagBody = addNode(mappingRecordByDeveloperNameMap.get('iSAFFile2').Tag_Name__c, fileDescriptionBody); 
         }catch(Exception e){ 	
@@ -392,8 +431,13 @@ public with sharing class GenerateLTReportXMLController {
  
     private void getPurchaseInvoices(){
         try{ 
-           		Set<String> fieldNameSet = new Set<String>();  
-            	String whereCondition = 'c2g__InvoiceDate__c >= :startDate and c2g__InvoiceDate__c <= :endDate';
+           		Set<String> fieldNameSet = new Set<String>(); 
+            	String whereCondition = 'c2g__Transaction__c != null and c2g__Transaction__r.c2g__Period__r.c2g__PeriodNumber__c IN :periodMonthList' +
+                    					' AND c2g__Transaction__r.c2g__Period__r.c2g__YearName__r.Name IN :periodYearList';
+                
+                if(listOfSelectedCompanies != null && !listOfSelectedCompanies.isEmpty()){
+        			whereCondition += ' AND c2g__Transaction__r.c2g__OwnerCompany__r.Id IN :listOfSelectedCompanies';
+        		}        					
            		listOfPurchaseInvoices = (List<c2g__codaPurchaseInvoice__c>)queryInvoices('c2g__codaPurchaseInvoice__c', 'purcahseInvoiceQuery', fieldNameSet, whereCondition);   	
            
            		if(listOfPurchaseInvoices != null && !listOfPurchaseInvoices.isEmpty()){
@@ -429,7 +473,12 @@ public with sharing class GenerateLTReportXMLController {
     private void getSalesInvoices(){    
         try{
             	Set<String> fieldNameSet = new Set<String>();            	
-            	String whereCondition = 'c2g__InvoiceDate__c >= :startDate and c2g__InvoiceDate__c <= :endDate';
+            	String whereCondition = 'c2g__Transaction__c != null and c2g__Transaction__r.c2g__Period__r.c2g__PeriodNumber__c IN :periodMonthList' +
+                    					' AND c2g__Transaction__r.c2g__Period__r.c2g__YearName__r.Name IN :periodYearList';
+                
+                if(listOfSelectedCompanies != null && !listOfSelectedCompanies.isEmpty()){
+        			whereCondition += ' AND c2g__Transaction__r.c2g__OwnerCompany__r.Id IN :listOfSelectedCompanies';
+        		}
             	listOfSalesInvoices = (List<c2g__codaInvoice__c>)queryInvoices('c2g__codaInvoice__c', 'salesInvoiceQuery', fieldNameSet, whereCondition);   	
             	
             	if(listOfSalesInvoices != null && !listOfSalesInvoices.isEmpty()){
@@ -495,8 +544,6 @@ public with sharing class GenerateLTReportXMLController {
                                 mappingRecordByDeveloperNameMap.get('SAFT_Header5').Default_Value__c ) +
     						   	addNode(mappingRecordByDeveloperNameMap.get('SAFT_Header6').Tag_Name__c, 
     						    mappingRecordByDeveloperNameMap.get('SAFT_Header6').Default_Value__c ) +
-    						   	addNode(mappingRecordByDeveloperNameMap.get('SAFT_Header7').Tag_Name__c, String.valueOf(startDate)) +
-    						   	addNode(mappingRecordByDeveloperNameMap.get('SAFT_Header8').Tag_Name__c, String.valueOf(endDate)) +
     						   	addNode(mappingRecordByDeveloperNameMap.get('SAFT_Header9').Tag_Name__c, 
 	    							addNode(mappingRecordByDeveloperNameMap.get('SAFT_Header_CmpnyAddInfo1').Tag_Name__c, 
 	    						   	mappingRecordByDeveloperNameMap.get('SAFT_Header_CmpnyAddInfo1').Default_Value__c) + 
@@ -563,7 +610,9 @@ public with sharing class GenerateLTReportXMLController {
     private String getMasterFilesCustomers(){
     	String mstrFileCustomers = '';
     	String mstrFileCustomersBody = '';
+        System.debug('Inside getMasterFilesCustomers:');
     	try{
+            System.debug('mapOfSAFCustomers:' + mapOfSAFCustomers);
     		if(mapOfSAFCustomers != null){
 	    		for(String customerId : mapOfSAFCustomers.keyset()){
 	    			mstrFileCustomersBody += addNode(mappingRecordByDeveloperNameMap.get('SAFT_MF_Customer0').Tag_Name__c,
@@ -972,6 +1021,23 @@ public with sharing class GenerateLTReportXMLController {
     	return purchaseInv;
    }
    
+   private List<String> getPeriodsForQuery(String selectedPeriod){
+       String period;
+       Integer indexOfPeriod;
+       List<String> listOfPeriodsForQuery = new List<String>();   
+       listOfPeriodMonths = new List<String>();
+       
+        for(SelectOption selOp : periodOptions){
+            listOfPeriodMonths.add(selOp.getValue());
+        }
+       	indexOfPeriod = listOfPeriodMonths.indexOf(selectedPeriod);
+        for(Integer i=0; i<=indexOfPeriod; i++){
+            period = listOfPeriodMonths.get(i);
+            listOfPeriodsForQuery.add(period);
+        }
+        return listOfPeriodsForQuery;
+   }
+    
    private void setSAFTReportData(){
     	Map<String, Set<String>> innerQueryObjAndFieldsMap = new Map<String, Set<String>>(); 	
     	Set<String> setOfInnerQueryFields = new Set<String>();
@@ -980,12 +1046,17 @@ public with sharing class GenerateLTReportXMLController {
    		String objName, whereCondition;
    		
    		try{
+            listOfPeriods = getPeriodsForQuery(selectedMonth); 
    			objName = mappingRecordByDeveloperNameMap.get('SAFT_GLE_Jrnl_Transaction1').Object_Name__c;
-	   //	whereCondition = 'c2g__Transaction__r.c2g__TransactionDate__c >= :startDate and c2g__Transaction__r.c2g__TransactionDate__c <= :endDate';
-	   		whereCondition = '';
+	   		whereCondition = 'c2g__Period__r.c2g__YearName__r.Name = :selectedYear' +
+                			 ' AND c2g__Period__r.c2g__PeriodNumber__c IN :listOfPeriods';
+            
+            if(listOfSelectedCompanies != null && !listOfSelectedCompanies.isEmpty()){
+        			whereCondition += ' AND c2g__OwnerCompany__r.Id IN :listOfSelectedCompanies';
+        	}
+            
 	   		fieldNameSet = getFieldNameSet(mappingRecordByDeveloperNameMap.get('SAFT_GLE_Jrnl_Transaction1').MasterLabel);  	 		
-	   		fieldNameSet.add('c2g__Period__r.c2g__YearName__r.c2g__StartDate__c');
-	   		fieldNameSet.add('c2g__Period__r.c2g__YearName__r.c2g__EndDate__c');
+	   		fieldNameSet.add('c2g__Period__r.c2g__PeriodNumber__c');
 	   		fieldNameSet.add('c2g__TransactionType__c');
 	   		fieldNameSet.add('c2g__Period__c');
 	   		fieldNameSet.add('c2g__Debits__c');
@@ -1002,12 +1073,12 @@ public with sharing class GenerateLTReportXMLController {
 	        setOfInnerQueryFields.add('c2g__HomeValue__c');
 	    	setOfInnerQueryFields.add('c2g__Transaction__r.c2g__Period__r.c2g__PeriodNumber__c');	    	
 			innerQueryObjAndFieldsMap.put(mappingRecordByDeveloperNameMap.get('SAFT_glaAcc0').Object_Name__c, setOfInnerQueryFields);   
-			
-	    	ReportsGenerationUtility.startDate = startDate;
-	        ReportsGenerationUtility.endDate = endDate;
+		
+            ReportsGenerationUtility.listOfPeriods = listOfPeriods;
+            ReportsGenerationUtility.selectedYear = selectedYear;
+            ReportsGenerationUtility.listOfSelectedCompanies = listOfSelectedCompanies;
 			listOfTransactions = (List<c2g__codaTransaction__c>)ReportsGenerationUtility.getSFDCRecordsWithSubQuery(objName, 
-	                                  fieldNameSet, whereCondition, hasSubquery, innerQueryObjAndFieldsMap); 
-	 
+	                                  fieldNameSet, whereCondition, hasSubquery, innerQueryObjAndFieldsMap);
 	    	if(listOfTransactions != null){
 	    		setGLABalancesInfo();
 	    		setGLAInfo();
@@ -1016,9 +1087,8 @@ public with sharing class GenerateLTReportXMLController {
 	    	getSalesInvoicesSAFT();
 	    	getPurchaseInvoicesSAFT();	   			
    		}catch(Exception e){
-   			throw new CustomException('Error while querying SAF-T report data! ' + e.getMessage());
+   			throw new CustomException('Error while querying SAF-T report data! ' + e.getMessage() + e.getStackTraceString());
    		}
-   		
    }
  
    private void getTaxCodeData(){
@@ -1074,17 +1144,13 @@ public with sharing class GenerateLTReportXMLController {
 	    if(listOfTransactions != null){
 	    	for(c2g__codaTransaction__c trn : listOfTransactions){	    	
 		    	if(trn.c2g__TransactionLineItems__r != null){
-                    
-                    Date trnStartDate = Date.valueOf(ReportsGenerationUtility.getValue(trn, 'c2g__Period__r.c2g__YearName__r.c2g__StartDate__c'));//Date.valueOf(startDate);
-				    Date trnEndDate = Date.valueOf(ReportsGenerationUtility.getValue(trn, 'c2g__Period__r.c2g__YearName__r.c2g__EndDate__c'));//Date.valueOf(endDate);
-                    Date dateOfTransaction = Date.valueOf(ReportsGenerationUtility.getValue(trn, mappingRecordByDeveloperNameMap.get('SAFT_GLE_Jrnl_Transaction4').SFDC_Field_Name__c));
 		    		for(c2g__codaTransactionLineItem__c trnLine : trn.c2g__TransactionLineItems__r){
 		    			String repCode = ReportsGenerationUtility.getValue(trnLine, mappingRecordByDeveloperNameMap.get('SAFT_glaAcc1').SFDC_Field_Name__c);
 				        Decimal lineItemHomeValue = Decimal.valueOf(ReportsGenerationUtility.getValue(trnLine, 'c2g__HomeValue__c'));
-   
-				        //startDate is start date from UI
-				        if(dateOfTransaction < startDate && dateOfTransaction >= trnStartDate){
-				        	if(lineItemHomeValue >= 0){
+                    	String periodMonth = ReportsGenerationUtility.getValue(trnLine, 'c2g__Transaction__r.c2g__Period__r.c2g__PeriodNumber__c');
+                        
+                        if(periodMonth != selectedMonth){
+                            if(lineItemHomeValue >= 0){
 				        		Decimal updatedOpeningDb = (mapOfReportingCodeOpeningDebitBal.get(repCode) != null) ? 
 	                                       Decimal.valueOf(mapOfReportingCodeOpeningDebitBal.get(repCode)) + lineItemHomeValue : 
 	                                       lineItemHomeValue;
@@ -1093,25 +1159,24 @@ public with sharing class GenerateLTReportXMLController {
 				        		Decimal updatedOpeningCr = (mapOfReportingCodeOpeningCreditBal.get(repCode) != null) ? 
 	                            		   Decimal.valueOf(mapOfReportingCodeOpeningCreditBal.get(repCode)) + lineItemHomeValue : 
 	                                       lineItemHomeValue;
-	                            mapOfReportingCodeOpeningCreditBal.put(repCode, String.valueOf(updatedOpeningCr));
+	                            mapOfReportingCodeOpeningCreditBal.put(repCode, String.valueOf(updatedOpeningCr));                            
 				        	}
-				        }else if(dateOfTransaction <= endDate && dateOfTransaction >= trnEndDate){
-				        	if(lineItemHomeValue >= 0){
+                        }
+				        if(lineItemHomeValue >= 0){
 				        		Decimal updatedClosingDb = (mapOfReportingCodeClosingDebitBal.get(repCode) != null) ? 
 	                                       Decimal.valueOf(mapOfReportingCodeClosingDebitBal.get(repCode)) + lineItemHomeValue : 
 	                                       lineItemHomeValue;
 	           					 mapOfReportingCodeClosingDebitBal.put(repCode, String.valueOf(updatedClosingDb));
-				        	}else{
+				        }else{
 				        		Decimal updatedClosingCr = (mapOfReportingCodeClosingCreditBal.get(repCode) != null) ? 
 	                            		   Decimal.valueOf(mapOfReportingCodeClosingCreditBal.get(repCode)) + lineItemHomeValue : 
 	                                       lineItemHomeValue;
 	                            mapOfReportingCodeClosingCreditBal.put(repCode, String.valueOf(updatedClosingCr));
-				        	}
-				        }
-		    		}
-		    	}	    	
-	    	}
-	    }  
+				        }	
+					}
+				}
+            }
+		}	    	
    }
      
    private void setGLAInfo(){
@@ -1152,8 +1217,13 @@ public with sharing class GenerateLTReportXMLController {
 	    Set<String> fieldNameSet = getFieldNameSet(mappingRecordByDeveloperNameMap.get('SAFT_MF_Customer0').MasterLabel);
 	    String objName = mappingRecordByDeveloperNameMap.get('SAFT_MF_Customer0').Object_Name__c;
 	    Boolean isNested = false;
-	    String whereCondition = 'c2g__Transaction__c != null and c2g__InvoiceDate__c >= :startDate and c2g__InvoiceDate__c <= :endDate'; 
-    		
+	    String whereCondition = 'c2g__Transaction__c != null and c2g__Transaction__r.c2g__Period__r.c2g__PeriodNumber__c = :selectedMonth' +
+                    			' AND c2g__Transaction__r.c2g__Period__r.c2g__YearName__r.Name = :selectedYear';
+        
+        if(listOfSelectedCompanies != null && !listOfSelectedCompanies.isEmpty()){
+        	whereCondition += ' AND c2g__Transaction__r.c2g__OwnerCompany__r.Id IN :listOfSelectedCompanies';
+        }
+        
     	try{  	
 	    	fieldNameSet.addAll(getFieldNameSet(mappingRecordByDeveloperNameMap.get('SAFT_Cust_OpenSalesInv1').MasterLabel));
 	    	fieldNameSet.addAll(getFieldNameSet(mappingRecordByDeveloperNameMap.get('SAFT_SrcDoc_SalesInv_Inv1').MasterLabel));
@@ -1162,11 +1232,11 @@ public with sharing class GenerateLTReportXMLController {
 	    	fieldNameSet.add('c2g__Transaction__r.c2g__Debits__c');
 	    	fieldNameSet.add('c2g__Transaction__r.c2g__Credits__c');
 	    		
-	    	ReportsGenerationUtility.startDate = startDate;
-			ReportsGenerationUtility.endDate = endDate;
+            ReportsGenerationUtility.listOfSelectedCompanies = listOfSelectedCompanies;
+            ReportsGenerationUtility.selectedMonth = selectedMonth;
+            ReportsGenerationUtility.selectedYear = selectedYear;
 	    	listOfSalesInvoices = (List<c2g__codaInvoice__c>)ReportsGenerationUtility.getSFDCRecordsWithSubQuery(objName, fieldNameSet,
-	    							whereCondition, isNested, innerQueryObjAndFieldsMap);
-	    			
+	    							whereCondition, isNested, innerQueryObjAndFieldsMap);		
 	    	if(listOfSalesInvoices != null){
 	    		processSalesInvoices(listOfSalesInvoices);
 	    	}		    		
@@ -1176,12 +1246,18 @@ public with sharing class GenerateLTReportXMLController {
     	}    									 
     }
     
+    //Get purchase invocies for SAF-T report
     private void getPurchaseInvoicesSAFT(){
     	Map<String, Set<String>> innerQueryObjAndFieldsMap = new Map<String, Set<String>>();
     	Set<String> fieldNameSet = getFieldNameSet(mappingRecordByDeveloperNameMap.get('SAFT_MF_Supplier0').MasterLabel);
     	String objName = mappingRecordByDeveloperNameMap.get('SAFT_MF_Supplier0').Object_Name__c;
     	Boolean isNested = false;
-    	String whereCondition = 'c2g__Transaction__c != null and c2g__InvoiceDate__c >= :startDate and c2g__InvoiceDate__c <= :endDate';
+    	String whereCondition = 'c2g__Transaction__c != null and c2g__Transaction__r.c2g__Period__r.c2g__PeriodNumber__c = :selectedMonth' +
+                    			' AND c2g__Transaction__r.c2g__Period__r.c2g__YearName__r.Name = :selectedYear';
+        
+        if(listOfSelectedCompanies != null && !listOfSelectedCompanies.isEmpty()){
+        	whereCondition += ' AND c2g__Transaction__r.c2g__OwnerCompany__r.Id IN :listOfSelectedCompanies';
+        }
     	
     	try{
     		fieldNameSet.addAll(getFieldNameSet(mappingRecordByDeveloperNameMap.get('SAFT_Supp_OpenPurInv1').MasterLabel));
@@ -1190,12 +1266,12 @@ public with sharing class GenerateLTReportXMLController {
 	    	fieldNameSet.addAll(getFieldNameSet(mappingRecordByDeveloperNameMap.get('SAFT_SrcDoc_Inv_DocTot1').MasterLabel));
 	    	fieldNameSet.add('c2g__Transaction__r.c2g__Debits__c');
 	    	fieldNameSet.add('c2g__Transaction__r.c2g__Credits__c');
-	    	
-	    	ReportsGenerationUtility.startDate = startDate;
-			ReportsGenerationUtility.endDate = endDate;
+	
+			ReportsGenerationUtility.listOfSelectedCompanies = listOfSelectedCompanies;
+            ReportsGenerationUtility.selectedMonth = selectedMonth;
+            ReportsGenerationUtility.selectedYear = selectedYear;
 	    	listOfPurchaseInvoices = (List<c2g__codaPurchaseInvoice__c>)ReportsGenerationUtility.getSFDCRecordsWithSubQuery(objName, fieldNameSet,
-	    													 whereCondition, isNested, innerQueryObjAndFieldsMap);
-	    			
+	    													 whereCondition, isNested, innerQueryObjAndFieldsMap);	
 	    	if(listOfPurchaseInvoices != null){
 	    		processPurchaseInvoices(listOfPurchaseInvoices);
 	    	}	    		
@@ -1214,7 +1290,6 @@ public with sharing class GenerateLTReportXMLController {
 		try{
 			String uniqueFieldName = (mappingRecordByDeveloperNameMap.get('SAFT_MF_Supplier1').SFDC_Field_Name__c != null) ?
 										mappingRecordByDeveloperNameMap.get('SAFT_MF_Supplier1').SFDC_Field_Name__c : '';	 
-	
 			for(c2g__codaPurchaseInvoice__c openPurInv : listOfPurchaseInvoices){
 				supplierUniqueId = ReportsGenerationUtility.getValue(openPurInv, uniqueFieldName);	
 				supplierRegNo = ReportsGenerationUtility.getValue(openPurInv, mappingRecordByDeveloperNameMap.get('SAFT_MF_Supplier1').SFDC_Field_Name__c);
@@ -1233,7 +1308,7 @@ public with sharing class GenerateLTReportXMLController {
 					}				
 					mapOfSAFSuppliers.put(supplierUniqueId, new wrapSupplierAccount(supplierRegNo, supplierName, supplierStreet, supplierHouseNo, supplierCity,
                                                                                    	supplierPostalCode, supplierCountry));			
-				}				
+				}
 			}				
 		}catch(Exception e){
     		ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, 'Error while updating supplier information: ' + 
@@ -1298,8 +1373,9 @@ public with sharing class GenerateLTReportXMLController {
                     setOfFields = getFieldNameSet(mappingRecordByDeveloperNameMap.get('purExpLineItemDocTotal1').MasterLabel);
                     innerQueryObjAndFieldsMap.put(mappingRecordByDeveloperNameMap.get('purExpLineItemDocTotal1').Object_Name__c, setOfFields);             	
                 }         
-                ReportsGenerationUtility.startDate = startDate;
-                ReportsGenerationUtility.endDate = endDate;
+            	ReportsGenerationUtility.periodMonthList = periodMonthList;
+            	ReportsGenerationUtility.periodYearList = periodYearList;   
+            	ReportsGenerationUtility.listOfSelectedCompanies = listOfSelectedCompanies;         
                 sObjectList = ReportsGenerationUtility.getSFDCRecordsWithSubQuery(objName, fieldNameSet, whereCondition, isNested, innerQueryObjAndFieldsMap);
         }catch(Exception e){
             ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, e.getMessage() + ' ' + e.getStackTraceString()));

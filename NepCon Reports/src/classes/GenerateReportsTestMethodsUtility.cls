@@ -88,7 +88,20 @@ public class GenerateReportsTestMethodsUtility {
                                                                                         c2g__AccountInvoiceNumber__c = '2897' + String.valueOf(i)
                    																 	);
             listOfPurchaseInvoices.add(pInvoice);         
-        }        
+        } 
+        
+         Account supplierAcc2 = [
+            			SELECT 
+                       		Id, Name, c2g__CODAVATRegistrationNumber__c, AccountNumber, c2g__CODAECCountryCode__c
+					   FROM Account 
+                       WHERE Name = 'Test Account 1' 
+                       LIMIT 1
+        			];
+        supplierAcc.c2g__CODAVATRegistrationNumber__c = 'LT2312346';
+        supplierAcc.AccountNumber = '242678';
+        supplierAcc2.c2g__CODAECCountryCode__c = 'LT';
+        update supplierAcc2;
+        listOfPurchaseInvoices.get(1).c2g__Account__c = supplierAcc2.Id;
         insert listOfPurchaseInvoices;   
         createPurchaseInvoiceLineItems();
 	} 
@@ -133,7 +146,7 @@ public class GenerateReportsTestMethodsUtility {
 		List<c2g__codaGeneralLedgerAccount__c> glaList = [SELECT Id, Name FROM c2g__codaGeneralLedgerAccount__c];
         
         for (c2g__codaGeneralLedgerAccount__c gla: glaList) {
-            for (Integer i = 0; i < 1; i++) {
+            for (Integer i = 0; i < 2; i++) {
                 acc = new Account(
                         Name = 'Test Account ' + String.valueOf(i),
                         BillingStreet = 'BillingStreet',
