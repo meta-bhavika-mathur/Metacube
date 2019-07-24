@@ -49,8 +49,10 @@ public with sharing class GeneratePolandInvoicesReportController {
     public List<String> periodYearList{get; set;}
     public List<c2g__codaCompany__c> listOfCompanies{get; set;} 
     public List<String> listOfSelectedCompanies{get; set;} 
+    private Date startDate, endDate;
     
     public List<SelectOption> companyOptions{get; set;}
+    public final String EMPTY_FIELD_VAL_EXCEPTION = 'Field value required for:';
     
 	
 	public GeneratePolandInvoicesReportController(){
@@ -113,6 +115,8 @@ public with sharing class GeneratePolandInvoicesReportController {
     //To generate JPK_KR_AllEntries Report
     private void createAllEntriesReport(){
     	try{		        	
+    	try{	
+            	getStartEndDate();
             	String bodyOfJPKTag = getKR_JPKTagBody();	            	
             	xmlFileString = '';
 				xmlFileString += '<?xml version="1.0" encoding="UTF-8"?>';
@@ -140,6 +144,9 @@ public with sharing class GeneratePolandInvoicesReportController {
     
     private String getKR_Report_Naglowek(){
        String naglowekStr = '';  	
+       String naglowekStr = '';  
+       Datetime genDate = System.now();
+	   String genDateFormat = genDate.format('yyyy-MM-dd\'T\'HH:mm:ss');
     	try{
     		 naglowekStr += addNode(mappingRecordByDeveloperNameMap.get('KR_JPK2').Namespace__c + ':' +
                             	mappingRecordByDeveloperNameMap.get('KR_JPK2').Tag_Name__c, 
@@ -153,6 +160,11 @@ public with sharing class GeneratePolandInvoicesReportController {
                                     mappingRecordByDeveloperNameMap.get('Naglowek3').Default_Value__c) + 
                                     addNode(mappingRecordByDeveloperNameMap.get('Naglowek4').Namespace__c + ':' + mappingRecordByDeveloperNameMap.get('Naglowek4').Tag_Name__c, 
                                     String.valueOf(System.now())) +
+                                    genDateFormat) +
+                                    addNode(mappingRecordByDeveloperNameMap.get('Naglowek5').Namespace__c + ':' + mappingRecordByDeveloperNameMap.get('Naglowek5').Tag_Name__c, 
+                                    String.valueOf(startDate)) +
+                                    addNode(mappingRecordByDeveloperNameMap.get('Naglowek6').Namespace__c + ':' + mappingRecordByDeveloperNameMap.get('Naglowek6').Tag_Name__c, 
+                                    String.valueOf(endDate)) +
                                     addNode(mappingRecordByDeveloperNameMap.get('Naglowek7').Namespace__c + ':' + mappingRecordByDeveloperNameMap.get('Naglowek7').Tag_Name__c, 
                                     mappingRecordByDeveloperNameMap.get('Naglowek7').Default_Value__c) +
                                     addNode(mappingRecordByDeveloperNameMap.get('Naglowek8').Namespace__c + ':' + mappingRecordByDeveloperNameMap.get('Naglowek8').Tag_Name__c, 
@@ -189,37 +201,38 @@ public with sharing class GeneratePolandInvoicesReportController {
     	String opisKonta, typKonta, kodZespolu, opisZespolu, kodKategorii, opisKategorii; 
     	glaForAllEntriesWrapper gla = mapOfGlaInfo.get(glaRepCode);
     	try{
+            
     		zoisBodyStr = addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS1').Namespace__c + ':' +
-							mappingRecordByDeveloperNameMap.get('KR_ZOiS1').Tag_Name__c, gla.kodKonta != null ? gla.kodKonta : '') +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS1').Tag_Name__c, String.isNotBlank(gla.kodKonta) ? gla.kodKonta : mappingRecordByDeveloperNameMap.get('KR_ZOiS1').Default_Value__c) +
 							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS2').Namespace__c + ':' +
-							mappingRecordByDeveloperNameMap.get('KR_ZOiS2').Tag_Name__c, gla.opisKonta != null ? gla.opisKonta : '') +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS2').Tag_Name__c, String.isNotBlank(gla.opisKonta) ? gla.opisKonta : mappingRecordByDeveloperNameMap.get('KR_ZOiS2').Default_Value__c) +
 							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS3').Namespace__c + ':' +
-							mappingRecordByDeveloperNameMap.get('KR_ZOiS3').Tag_Name__c, gla.typKonta != null ? gla.typKonta : '') +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS3').Tag_Name__c, String.isNotBlank(gla.typKonta) ? gla.typKonta : mappingRecordByDeveloperNameMap.get('KR_ZOiS3').Default_Value__c) +
 							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS4').Namespace__c + ':' +
-							mappingRecordByDeveloperNameMap.get('KR_ZOiS4').Tag_Name__c, gla.kodZespolu != null ? gla.kodZespolu : '') +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS4').Tag_Name__c, String.isNotBlank(gla.kodZespolu) ? gla.kodZespolu : mappingRecordByDeveloperNameMap.get('KR_ZOiS4').Default_Value__c) +
 							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS5').Namespace__c + ':' +
-							mappingRecordByDeveloperNameMap.get('KR_ZOiS5').Tag_Name__c, gla.opisZespolu != null ? gla.opisZespolu : '') +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS5').Tag_Name__c, String.isNotBlank(gla.opisZespolu) ? gla.opisZespolu : mappingRecordByDeveloperNameMap.get('KR_ZOiS5').Default_Value__c) +
 							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS6').Namespace__c + ':' +
-							mappingRecordByDeveloperNameMap.get('KR_ZOiS6').Tag_Name__c, gla.kodKategorii != null ? gla.kodKategorii : '') +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS6').Tag_Name__c, String.isNotBlank(gla.kodKategorii) ? gla.kodKategorii : mappingRecordByDeveloperNameMap.get('KR_ZOiS6').Default_Value__c) +
 							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS7').Namespace__c + ':' +
-							mappingRecordByDeveloperNameMap.get('KR_ZOiS7').Tag_Name__c, gla.opisKategorii != null ? gla.opisKategorii : '') +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS7').Tag_Name__c, String.isNotBlank(gla.opisKategorii) ? gla.opisKategorii : mappingRecordByDeveloperNameMap.get('KR_ZOiS7').Default_Value__c) +
 							
 							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS8').Namespace__c + ':' +
-							mappingRecordByDeveloperNameMap.get('KR_ZOiS8').Tag_Name__c, mapOfOpeningBal.get(glaRepCode) != null ? mapOfOpeningBal.get(glaRepCode) : '') +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS8').Tag_Name__c, String.isNotBlank(mapOfOpeningBal.get(glaRepCode)) ? mapOfOpeningBal.get(glaRepCode) : mappingRecordByDeveloperNameMap.get('KR_ZOiS8').Default_Value__c) +
 							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS9').Namespace__c + ':' +
-							mappingRecordByDeveloperNameMap.get('KR_ZOiS9').Tag_Name__c, mapOfClosingBal.get(glaRepCode) != null ? mapOfClosingBal.get(glaRepCode) : '') +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS9').Tag_Name__c, String.isNotBlank(mapOfClosingBal.get(glaRepCode)) ? mapOfClosingBal.get(glaRepCode) : mappingRecordByDeveloperNameMap.get('KR_ZOiS9').Default_Value__c) +
 							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS10').Namespace__c + ':' +
-							mappingRecordByDeveloperNameMap.get('KR_ZOiS10').Tag_Name__c, mapOfDebitsForReportingPeriod.get(glaRepCode) != null ? mapOfDebitsForReportingPeriod.get(glaRepCode) : '') +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS10').Tag_Name__c, String.isNotBlank(mapOfDebitsForReportingPeriod.get(glaRepCode)) ? mapOfDebitsForReportingPeriod.get(glaRepCode) : mappingRecordByDeveloperNameMap.get('KR_ZOiS10').Default_Value__c) +
 							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS11').Namespace__c + ':' +
-							mappingRecordByDeveloperNameMap.get('KR_ZOiS11').Tag_Name__c, mapOfCreditsForReportingPeriod.get(glaRepCode) != null ? mapOfCreditsForReportingPeriod.get(glaRepCode) : '') +
+							mappingRecordByDeveloperNameMap.get('KR_ZOiS11').Tag_Name__c, String.isNotBlank(mapOfCreditsForReportingPeriod.get(glaRepCode)) ? mapOfCreditsForReportingPeriod.get(glaRepCode) : mappingRecordByDeveloperNameMap.get('KR_ZOiS11').Default_Value__c) +
 							addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS12').Namespace__c + ':' +
-                            mappingRecordByDeveloperNameMap.get('KR_ZOiS12').Tag_Name__c, mapOfDbFromBeginingToEnd.get(glaRepCode) != null ? mapOfDbFromBeginingToEnd.get(glaRepCode) : '') + 
+                            mappingRecordByDeveloperNameMap.get('KR_ZOiS12').Tag_Name__c, String.isNotBlank(mapOfDbFromBeginingToEnd.get(glaRepCode)) ? mapOfDbFromBeginingToEnd.get(glaRepCode) : mappingRecordByDeveloperNameMap.get('KR_ZOiS12').Default_Value__c) + 
                             addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS13').Namespace__c + ':' +
-                            mappingRecordByDeveloperNameMap.get('KR_ZOiS13').Tag_Name__c, mapOfCrFromBeginingToEnd.get(glaRepCode) != null ? mapOfCrFromBeginingToEnd.get(glaRepCode) : '') +
+                            mappingRecordByDeveloperNameMap.get('KR_ZOiS13').Tag_Name__c, String.isNotBlank(mapOfCrFromBeginingToEnd.get(glaRepCode)) ? mapOfCrFromBeginingToEnd.get(glaRepCode) : mappingRecordByDeveloperNameMap.get('KR_ZOiS13').Default_Value__c) +
                             addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS14').Namespace__c + ':' +
-                            mappingRecordByDeveloperNameMap.get('KR_ZOiS14').Tag_Name__c, mapOfDebitsForReportingPeriod.get(glaRepCode) != null ? mapOfDebitsForReportingPeriod.get(glaRepCode) : '') +
+                            mappingRecordByDeveloperNameMap.get('KR_ZOiS14').Tag_Name__c, String.isNotBlank(mapOfDebitsForReportingPeriod.get(glaRepCode))? mapOfDebitsForReportingPeriod.get(glaRepCode) : mappingRecordByDeveloperNameMap.get('KR_ZOiS14').Default_Value__c) +
                             addNode(mappingRecordByDeveloperNameMap.get('KR_ZOiS15').Namespace__c + ':' +
-                            mappingRecordByDeveloperNameMap.get('KR_ZOiS15').Tag_Name__c, mapOfCreditsForReportingPeriod.get(glaRepCode) != null ? mapOfCreditsForReportingPeriod.get(glaRepCode) : '');  							
+                            mappingRecordByDeveloperNameMap.get('KR_ZOiS15').Tag_Name__c, String.isNotBlank(mapOfCreditsForReportingPeriod.get(glaRepCode)) ? mapOfCreditsForReportingPeriod.get(glaRepCode) : mappingRecordByDeveloperNameMap.get('KR_ZOiS15').Default_Value__c);  							
     	}catch(Exception e){
     		ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, e.getMessage() + ' ' + e.getStackTraceString()));
     	}
@@ -253,6 +266,10 @@ public with sharing class GeneratePolandInvoicesReportController {
     	String fieldVal = '';    	
         try{
             String userName = UserInfo.getFirstName() + ' ' + UserInfo.getLastName();
+            
+            if(String.isBlank(userName)){
+                throw new CustomException(EMPTY_FIELD_VAL_EXCEPTION + mappingRecordByDeveloperNameMap.get('KR_Dziennik9').Tag_Name__c);
+            }
             for(Integer i=1; i<=11; i++){
                 if(i == 9){
                      dziennikStr += addNode(mappingRecordByDeveloperNameMap.get('KR_Dziennik9').Namespace__c + ':' +
@@ -262,11 +279,13 @@ public with sharing class GeneratePolandInvoicesReportController {
                 	attributeStr = 'KR_Dziennik' + i;
                     fieldName = mappingRecordByDeveloperNameMap.get(attributeStr).SFDC_Field_Name__c;
                     fieldVal = (fieldName != null) ? ReportsGenerationUtility.getValue(jrnl, fieldName) : null;
+                    fieldVal = ReportsGenerationUtility.getValue(jrnl, mappingRecordByDeveloperNameMap.get(attributeStr).SFDC_Field_Name__c);
+                    if(String.isBlank(fieldVal)){
+                        throw new CustomException(EMPTY_FIELD_VAL_EXCEPTION + mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c);
+                    }
                     dziennikStr += addNode(mappingRecordByDeveloperNameMap.get(attributeStr).Namespace__c + ':' +
-                                           mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c, 
-                                           fieldVal != null ? fieldVal : '');
-                }
-           
+									mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c, fieldVal);
+                }          
     		}            
         }catch(Exception e){
     		ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, e.getMessage() + ' ' + e.getStackTraceString()));
@@ -322,6 +341,56 @@ public with sharing class GeneratePolandInvoicesReportController {
         final String DOC_CURR = 'SLOTY';
         
         for(Integer i=1; i<=7; i++){
+        fieldValue = ReportsGenerationUtility.getValue(trnLi, mappingRecordByDeveloperNameMap.get('KR_KontoZapis1').SFDC_Field_Name__c);
+        if(String.isBlank(fieldValue)){
+            throw new CustomException(EMPTY_FIELD_VAL_EXCEPTION + mappingRecordByDeveloperNameMap.get('KR_KontoZapis1').Tag_Name__c);
+        }else{
+            kontosZapisBody += addNode(mappingRecordByDeveloperNameMap.get('KR_KontoZapis1').Namespace__c + ':' +
+							 	mappingRecordByDeveloperNameMap.get('KR_KontoZapis1').Tag_Name__c, fieldValue);								
+        }
+        
+        fieldValue = ReportsGenerationUtility.getValue(trnLi, mappingRecordByDeveloperNameMap.get('KR_KontoZapis2').SFDC_Field_Name__c);
+        if(String.isBlank(fieldValue)){
+            throw new CustomException(EMPTY_FIELD_VAL_EXCEPTION + mappingRecordByDeveloperNameMap.get('KR_KontoZapis2').Tag_Name__c);
+        }else{
+            kontosZapisBody += addNode(mappingRecordByDeveloperNameMap.get('KR_KontoZapis2').Namespace__c + ':' +
+							 	mappingRecordByDeveloperNameMap.get('KR_KontoZapis2').Tag_Name__c, fieldValue);								
+        }
+        
+        fieldValue = ReportsGenerationUtility.getValue(trnLi, mappingRecordByDeveloperNameMap.get('KR_KontoZapis3').SFDC_Field_Name__c);
+        if(String.isBlank(fieldValue)){
+            throw new CustomException(EMPTY_FIELD_VAL_EXCEPTION + mappingRecordByDeveloperNameMap.get('KR_KontoZapis3').Tag_Name__c);
+        }else{
+            kontosZapisBody += addNode(mappingRecordByDeveloperNameMap.get('KR_KontoZapis3').Namespace__c + ':' +
+							 	mappingRecordByDeveloperNameMap.get('KR_KontoZapis3').Tag_Name__c, fieldValue);								
+        }
+        
+        fieldValue = ReportsGenerationUtility.getValue(trnLi, mappingRecordByDeveloperNameMap.get('KR_KontoZapis4').SFDC_Field_Name__c);
+        if(String.isBlank(fieldValue)){
+            throw new CustomException(EMPTY_FIELD_VAL_EXCEPTION + mappingRecordByDeveloperNameMap.get('KR_KontoZapis4').Tag_Name__c);
+        }else{
+            kontosZapisBody += addNode(mappingRecordByDeveloperNameMap.get('KR_KontoZapis4').Namespace__c + ':' +
+							 	mappingRecordByDeveloperNameMap.get('KR_KontoZapis4').Tag_Name__c, fieldValue);								
+        }
+        
+        fieldValue = ReportsGenerationUtility.getValue(trnLi, mappingRecordByDeveloperNameMap.get('KR_KontoZapis6').SFDC_Field_Name__c);
+        if(String.isBlank(fieldValue)){
+            throw new CustomException(EMPTY_FIELD_VAL_EXCEPTION + mappingRecordByDeveloperNameMap.get('KR_KontoZapis6').Tag_Name__c);
+        }else{
+            kontosZapisBody += addNode(mappingRecordByDeveloperNameMap.get('KR_KontoZapis6').Namespace__c + ':' +
+							 	mappingRecordByDeveloperNameMap.get('KR_KontoZapis6').Tag_Name__c, fieldValue);								
+        }
+        
+        fieldValue = ReportsGenerationUtility.getValue(trnLi, mappingRecordByDeveloperNameMap.get('KR_KontoZapis7').SFDC_Field_Name__c);
+        if(String.isBlank(fieldValue)){
+            throw new CustomException(EMPTY_FIELD_VAL_EXCEPTION + mappingRecordByDeveloperNameMap.get('KR_KontoZapis7').Tag_Name__c);
+        }else{
+            kontosZapisBody += addNode(mappingRecordByDeveloperNameMap.get('KR_KontoZapis7').Namespace__c + ':' +
+							 	mappingRecordByDeveloperNameMap.get('KR_KontoZapis7').Tag_Name__c, fieldValue);								
+        }
+       	
+        
+      /*  for(Integer i=1; i<=7; i++){
     		attributeStr = 'KR_KontoZapis' + i;
     		fieldValue = ReportsGenerationUtility.getValue(trnLi, mappingRecordByDeveloperNameMap.get(attributeStr).SFDC_Field_Name__c);
     		kontosZapisBody += addNode(mappingRecordByDeveloperNameMap.get(attributeStr).Namespace__c + ':' +
@@ -343,6 +412,7 @@ public with sharing class GeneratePolandInvoicesReportController {
     						mappingRecordByDeveloperNameMap.get('KR_KontoZapis9').Tag_Name__c, docCurr) +
     						addNode(mappingRecordByDeveloperNameMap.get('KR_KontoZapis10').Namespace__c + ':' + 
     						mappingRecordByDeveloperNameMap.get('KR_KontoZapis10').Tag_Name__c, fieldValue != null ? fieldValue : '');
+    						mappingRecordByDeveloperNameMap.get('KR_KontoZapis10').Tag_Name__c, fieldValue != null ? fieldValue : '');*/
     						
         return kontosZapisBody;
     }
@@ -381,6 +451,8 @@ public with sharing class GeneratePolandInvoicesReportController {
     //To generate VAT All invoices report
     private void createInvoicesVATReport(){
         try{		            	
+        try{	
+            	getStartEndDate();
             	String bodyOfJPKTag = getVATReportJPKTagBody();	            	
             	xmlFileString = '';
 				xmlFileString += '<?xml version="1.0" encoding="UTF-8"?>';
@@ -406,6 +478,9 @@ public with sharing class GeneratePolandInvoicesReportController {
     
     private String getVATReport_Naglowek(){
        	String naglowekStr = '';  	
+       	String naglowekStr = '';  
+        Datetime genDate = System.now();
+		String genDateFormat = genDate.format('yyyy-MM-dd\'T\'HH:mm:ss');
     	try{
     		 naglowekStr += addNode(mappingRecordByDeveloperNameMap.get('VAT_JPK2').Tag_Name__c, 
     		 					addNodeWithAttributes(mappingRecordByDeveloperNameMap.get('VAT_KodFormularza0').Tag_Name__c, 
@@ -414,6 +489,9 @@ public with sharing class GeneratePolandInvoicesReportController {
     		 					addNode(mappingRecordByDeveloperNameMap.get('VAT_Naglowek2').Tag_Name__c, mappingRecordByDeveloperNameMap.get('VAT_Naglowek2').Default_Value__c) + 
     		 					addNode(mappingRecordByDeveloperNameMap.get('VAT_Naglowek3').Tag_Name__c, mappingRecordByDeveloperNameMap.get('VAT_Naglowek3').Default_Value__c) + 
     		 					addNode(mappingRecordByDeveloperNameMap.get('VAT_Naglowek4').Tag_Name__c, String.valueOf(System.now())) +
+    		 					addNode(mappingRecordByDeveloperNameMap.get('VAT_Naglowek4').Tag_Name__c, genDateFormat) + 
+                                addNode(mappingRecordByDeveloperNameMap.get('VAT_Naglowek5').Tag_Name__c, String.valueOf(startDate)) +
+                                addNode(mappingRecordByDeveloperNameMap.get('VAT_Naglowek6').Tag_Name__c, String.valueOf(endDate)) +
     		 					addNode(mappingRecordByDeveloperNameMap.get('VAT_Naglowek7').Tag_Name__c, mappingRecordByDeveloperNameMap.get('VAT_Naglowek7').Default_Value__c)
     		 					 	
     		 				); 		 
@@ -459,22 +537,56 @@ public with sharing class GeneratePolandInvoicesReportController {
     }
     
     private String getSprzedazWierszBody(c2g__codaInvoiceLineItem__c invoiceLine){
-        String sprzedazWierszBody = ' ';
-        String sprzedazWiersz = ' ';
-        String attributeStr = ' ';
-        String fieldName = ' ';
-        String fieldVal = ' ';
+        String sprzedazWierszBody = '';
+        String sprzedazWiersz = '';
+        String attributeStr = '';
+        String fieldName = '';
+        String fieldVal = '';
+        String genDateFormat = '';
      
         try{
             for(Integer i=1; i<=7; i++){
                 attributeStr = 'VAT_SprzedazWiersz' + i;
-                fieldName = mappingRecordByDeveloperNameMap.get(attributeStr).SFDC_Field_Name__c != null ?
-                			mappingRecordByDeveloperNameMap.get(attributeStr).SFDC_Field_Name__c : '';
-                fieldVal = ReportsGenerationUtility.getValue(invoiceLine, fieldName);
-                sprzedazWierszBody += addNode(mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c, fieldVal != null ? fieldVal : '');        
+                
+                if(attributeStr == 'VAT_SprzedazWiersz4'){
+                    fieldVal = '';
+                    List<String> listOfAddressFields = new List<String>();
+                    String street = ReportsGenerationUtility.getValue(invoiceLine, mappingRecordByDeveloperNameMap.get('AccountStreet').SFDC_Field_Name__c);
+					String zipCode = ReportsGenerationUtility.getValue(invoiceLine, mappingRecordByDeveloperNameMap.get('AccountZipCode').SFDC_Field_Name__c);
+					String country = ReportsGenerationUtility.getValue(invoiceLine, mappingRecordByDeveloperNameMap.get('AccountCountry').SFDC_Field_Name__c);
+                    
+                    if(String.isNotBlank(street)){
+            			listOfAddressFields.add(street);
+        			}
+                    if(String.isNotBlank(zipCode)){
+                        listOfAddressFields.add(zipCode);
+                    }
+        			if(String.isNotBlank(country)){
+						listOfAddressFields.add(country);                        					
+                    } 
+                    if(!listOfAddressFields.isEmpty()){
+						fieldVal = String.join(listOfAddressFields, ',');
+        			}else{
+            			throw new CustomException(EMPTY_FIELD_VAL_EXCEPTION + mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c);
+        			}
+                }else if(attributeStr == 'VAT_SprzedazWiersz6' || attributeStr == 'VAT_SprzedazWiersz7'){
+					fieldVal = ReportsGenerationUtility.getValue(invoiceLine, 
+								mappingRecordByDeveloperNameMap.get(attributeStr).SFDC_Field_Name__c);
+                    if(String.isNotBlank(fieldVal)){
+                        Datetime genDate = DateTime.valueOf(fieldVal);
+                        genDateFormat = genDate.format('yyyy-MM-dd');
+                        fieldVal = genDateFormat;
+                    }else{
+						throw new CustomException(EMPTY_FIELD_VAL_EXCEPTION + mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c);
+					}
+                }else{
+                    fieldVal = ReportsGenerationUtility.getValue(invoiceLine, mappingRecordByDeveloperNameMap.get(attributeStr).SFDC_Field_Name__c);                    
+                    if(String.isBlank(fieldVal)){
+                        throw new CustomException(EMPTY_FIELD_VAL_EXCEPTION + mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c);
+                    }   
+                }
+                sprzedazWierszBody += addNode(mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c, fieldVal);
     		}
-    		sprzedazWierszBody += addNode(mappingRecordByDeveloperNameMap.get('VAT_SprzedazWiersz8').Tag_Name__c, '') + 
-    								addNode(mappingRecordByDeveloperNameMap.get('VAT_SprzedazWiersz9').Tag_Name__c, '');
         }catch(Exception e){
             ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, e.getMessage() + ' ' + e.getStackTraceString()));
         }        
@@ -506,9 +618,9 @@ public with sharing class GeneratePolandInvoicesReportController {
     
     //To get Purchase Line Items
     private String getVATReport_ZakupWiersz(){
-    	String zakupWierszList = ' ';
-    	String zakupWierszBody = ' ';
- 
+    	String zakupWierszList = '';
+    	String zakupWierszBody = '';
+
     	if(listOfPurchaseLinesForVATReport != null && !listOfPurchaseLinesForVATReport.isEmpty()){
 	    	for(c2g__codaPurchaseInvoiceLineItem__c purLineItem : listOfPurchaseLinesForVATReport){  
 	    		zakupWierszBody = getZakupWierszBody(purLineItem);
@@ -523,6 +635,7 @@ public with sharing class GeneratePolandInvoicesReportController {
         String fieldName = ' ';
         String fieldVal = '';
         String attributeStr = '';
+        String genDateFormat = ''; 
         
         for(Integer i=1; i<=9; i++){
     		attributeStr = 'VAT_ZakupWiersz' + i;
@@ -530,6 +643,48 @@ public with sharing class GeneratePolandInvoicesReportController {
             fieldVal = ReportsGenerationUtility.getValue(purLine, fieldName);
     		zakupWierszBody += addNode(mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c, fieldVal != null ? fieldVal : '');
     	}
+        for(Integer i=1; i<=7; i++){
+                attributeStr = 'VAT_ZakupWiersz' + i;
+                
+                if(attributeStr == 'VAT_ZakupWiersz4'){
+                    fieldVal = '';
+                    List<String> listOfAddressFields = new List<String>();
+                    String street = ReportsGenerationUtility.getValue(purLine, mappingRecordByDeveloperNameMap.get('AccountStreetPur').SFDC_Field_Name__c);
+					String zipCode = ReportsGenerationUtility.getValue(purLine, mappingRecordByDeveloperNameMap.get('AccountZipCodePur').SFDC_Field_Name__c);
+					String country = ReportsGenerationUtility.getValue(purLine, mappingRecordByDeveloperNameMap.get('AccountCountryPur').SFDC_Field_Name__c);
+                    
+                    if(String.isNotBlank(street)){
+            			listOfAddressFields.add(street);
+        			}
+                    if(String.isNotBlank(zipCode)){
+                        listOfAddressFields.add(zipCode);
+                    }
+        			if(String.isNotBlank(country)){
+						listOfAddressFields.add(country);                        					
+                    } 
+                    if(!listOfAddressFields.isEmpty()){
+						fieldVal = String.join(listOfAddressFields, ',');
+        			}else{
+            			throw new CustomException(EMPTY_FIELD_VAL_EXCEPTION + mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c);
+        			}
+                }else if(attributeStr == 'VAT_ZakupWiersz6' || attributeStr == 'VAT_ZakupWiersz7'){
+					fieldVal = ReportsGenerationUtility.getValue(purLine, 
+								mappingRecordByDeveloperNameMap.get(attributeStr).SFDC_Field_Name__c);
+                    if(String.isNotBlank(fieldVal)){
+                        Datetime genDate = DateTime.valueOf(fieldVal);
+                        genDateFormat = genDate.format('yyyy-MM-dd');
+                        fieldVal = genDateFormat;
+                    }else{
+						throw new CustomException(EMPTY_FIELD_VAL_EXCEPTION + mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c);
+					}
+                }else{
+                    fieldVal = ReportsGenerationUtility.getValue(purLine, mappingRecordByDeveloperNameMap.get(attributeStr).SFDC_Field_Name__c);                    
+                    if(String.isBlank(fieldVal)){
+                        throw new CustomException(EMPTY_FIELD_VAL_EXCEPTION + mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c);
+                    }   
+                }
+                zakupWierszBody += addNode(mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c, fieldVal);
+        }
         return zakupWierszBody;
     }
     
@@ -558,7 +713,8 @@ public with sharing class GeneratePolandInvoicesReportController {
     
     //To generate sales invoices report
     private void createSalesInvoicesReport(){
-		try{		        	
+		try{	
+            	getStartEndDate();
             	String bodyOfJPKTag = getJPKTagBody();	            	
             	xmlFileString = '';
 				xmlFileString += '<?xml version="1.0" encoding="UTF-8"?>';
@@ -586,6 +742,9 @@ public with sharing class GeneratePolandInvoicesReportController {
     
     private String getNaglowek(){
     	String naglowekStr = '';  	
+    	String naglowekStr = '';
+        Datetime genDate = System.now();
+		String genDateFormat = genDate.format('yyyy-MM-dd\'T\'HH:mm:ss');
     	try{
     		 naglowekStr += addNode(mappingRecordByDeveloperNameMap.get('Naglowek0').Namespace__c + ':' +
     		 				mappingRecordByDeveloperNameMap.get('Naglowek0').Tag_Name__c, 
@@ -599,6 +758,11 @@ public with sharing class GeneratePolandInvoicesReportController {
     		 					mappingRecordByDeveloperNameMap.get('Naglowek3').Default_Value__c) + 
     		 					addNode(mappingRecordByDeveloperNameMap.get('Naglowek4').Namespace__c + ':' + mappingRecordByDeveloperNameMap.get('Naglowek4').Tag_Name__c, 
     		 					String.valueOf(System.now())) +
+    		 					genDateFormat) +
+                                addNode(mappingRecordByDeveloperNameMap.get('Naglowek5').Namespace__c + ':' + mappingRecordByDeveloperNameMap.get('Naglowek5').Tag_Name__c, 
+    		 					String.valueOf(startDate)) +
+                                addNode(mappingRecordByDeveloperNameMap.get('Naglowek6').Namespace__c + ':' + mappingRecordByDeveloperNameMap.get('Naglowek6').Tag_Name__c, 
+    		 					String.valueOf(endDate)) +
     		 					addNode(mappingRecordByDeveloperNameMap.get('Naglowek7').Namespace__c + ':' + mappingRecordByDeveloperNameMap.get('Naglowek7').Tag_Name__c, 
     		 					mappingRecordByDeveloperNameMap.get('Naglowek7').Default_Value__c) +
     		 					addNode(mappingRecordByDeveloperNameMap.get('Naglowek8').Namespace__c + ':' + mappingRecordByDeveloperNameMap.get('Naglowek8').Tag_Name__c, 
@@ -674,45 +838,91 @@ public with sharing class GeneratePolandInvoicesReportController {
         String fieldVal = '';
         String taxCode = '';
         String taxRegNum = '';
+        String genDateFormat = '';
     	
-        for(Integer i=1; i<=23; i++){
-    		attributeStr = 'Faktura' + i;
-            if(i >= 15 && i<=22){
-                fieldVal = (mappingRecordByDeveloperNameMap.get(attributeStr).Default_Value__c != null) ? 
-                    		mappingRecordByDeveloperNameMap.get(attributeStr).Default_Value__c : '';
-                fakturaBodyStr += addNode(mappingRecordByDeveloperNameMap.get(attributeStr).Namespace__c + ':' +
-                                          mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c, fieldVal);
-            }else{           	
-            	if(attributeStr == 'Faktura7'){
-            		taxCode = ReportsGenerationUtility.getValue(salesInv, (mappingRecordByDeveloperNameMap.get('Faktura7').SFDC_Field_Name__c != null) ? 
-            													mappingRecordByDeveloperNameMap.get('Faktura7').SFDC_Field_Name__c : '');
-            		taxRegNum = ReportsGenerationUtility.getValue(salesInv, (mappingRecordByDeveloperNameMap.get('Faktura8').SFDC_Field_Name__c != null) ?
-            													mappingRecordByDeveloperNameMap.get('Faktura8').SFDC_Field_Name__c : '');
-            		if(taxCode != null && taxRegNum != null)
-            			fieldVal = taxCode + taxRegNum;
-            	}else if(attributeStr == 'Faktura4'){
-            		fieldVal = (ReportsGenerationUtility.getValue(salesInv, 'c2g__Account__r.Primary_Country__c') != null) ?
-            					ReportsGenerationUtility.getValue(salesInv, 'c2g__Account__r.Primary_Country__c') : '';
-                }else if(attributeStr == 'Faktura14'){
-					fieldVal = ReportsGenerationUtility.getValue(salesInv, (mappingRecordByDeveloperNameMap.get('Faktura14').SFDC_Field_Name__c != null) ? 
-            					mappingRecordByDeveloperNameMap.get('Faktura14').SFDC_Field_Name__c : '');          			  
-                }else if(attributeStr == 'Faktura23'){
-                    fieldVal = '';
-                    String invTot = ReportsGenerationUtility.getValue(salesInv, (mappingRecordByDeveloperNameMap.get('Faktura14').SFDC_Field_Name__c != null) ? 
-            						mappingRecordByDeveloperNameMap.get('Faktura14').SFDC_Field_Name__c : '');                    
-                    if(String.isNotBlank(invTot)){
-                        Decimal invoiceTotal = Decimal.valueOf(invTot);
-                        fieldVal = invoiceTotal > 0 ? 'VAT' : 'CORRECTION';                        
-                    }
-                }else{
-            		fieldName = mappingRecordByDeveloperNameMap.get(attributeStr).SFDC_Field_Name__c;
-		            fieldVal = (fieldName != null) ? ReportsGenerationUtility.getValue(salesInv, fieldName) : '';
-            	} 
-            	fakturaBodyStr += addNode(mappingRecordByDeveloperNameMap.get(attributeStr).Namespace__c + ':' +
-		                                      mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c, 
-		                                       (fieldVal != null ? fieldVal : ''));	         		            
-            }          
-    	}
+        // Add P_1
+        fieldVal = ReportsGenerationUtility.getValue(salesInv, 
+					mappingRecordByDeveloperNameMap.get('Faktura1').SFDC_Field_Name__c);
+        if(String.isNotBlank(fieldVal)){
+        	Datetime genDate = DateTime.valueOf(fieldVal);
+            genDateFormat = genDate.format('yyyy-MM-dd');
+        }else{
+			throw new CustomException(EMPTY_FIELD_VAL_EXCEPTION + mappingRecordByDeveloperNameMap.get('Faktura1').Tag_Name__c);
+		}
+        fieldVal = genDateFormat;          
+        fakturaBodyStr = addNode(mappingRecordByDeveloperNameMap.get('Faktura1').Namespace__c + ':' +
+							mappingRecordByDeveloperNameMap.get('Faktura1').Tag_Name__c, fieldVal);
+        
+        
+        //Add P_2A
+        fieldVal = ReportsGenerationUtility.getValue(salesInv, mappingRecordByDeveloperNameMap.get('Faktura2').SFDC_Field_Name__c);
+        if(String.isNotBlank(fieldVal)){
+        	fakturaBodyStr += addNode(mappingRecordByDeveloperNameMap.get('Faktura2').Namespace__c + ':' +
+								mappingRecordByDeveloperNameMap.get('Faktura2').Tag_Name__c, fieldVal);
+        }else{
+			throw new CustomException(EMPTY_FIELD_VAL_EXCEPTION + mappingRecordByDeveloperNameMap.get('Faktura2').Tag_Name__c);
+		} 
+        
+        //Add P_3C
+        fieldVal = ReportsGenerationUtility.getValue(salesInv, mappingRecordByDeveloperNameMap.get('Faktura5').SFDC_Field_Name__c);
+        if(String.isNotBlank(fieldVal)){
+        	fakturaBodyStr += addNode(mappingRecordByDeveloperNameMap.get('Faktura5').Namespace__c + ':' +
+								mappingRecordByDeveloperNameMap.get('Faktura5').Tag_Name__c, fieldVal);
+        }else{
+			throw new CustomException(EMPTY_FIELD_VAL_EXCEPTION + mappingRecordByDeveloperNameMap.get('Faktura5').Tag_Name__c);
+		} 
+        
+        //Add P_3D
+        List<String> listOfAddressFields = new List<String>();
+		String cmpnyStreet = ReportsGenerationUtility.getValue(salesInv, mappingRecordByDeveloperNameMap.get('CompanyAddressStreet').SFDC_Field_Name__c);
+		String cmpnyZipCode = ReportsGenerationUtility.getValue(salesInv, mappingRecordByDeveloperNameMap.get('CompanyAddressZipPostal').SFDC_Field_Name__c);
+		String cmpnyCountry = ReportsGenerationUtility.getValue(salesInv, mappingRecordByDeveloperNameMap.get('CompanyAddressCountry').SFDC_Field_Name__c);
+        
+        if(String.isNotBlank(cmpnyStreet)){
+            listOfAddressFields.add(cmpnyStreet);
+        }
+        if(String.isNotBlank(cmpnyZipCode)){
+            listOfAddressFields.add(cmpnyZipCode);
+		}
+        if(String.isNotBlank(cmpnyCountry)){
+			listOfAddressFields.add(cmpnyCountry);                        
+		}  
+        if(!listOfAddressFields.isEmpty()){
+			fieldVal = String.join(listOfAddressFields, ',');
+        }else{
+            throw new CustomException(EMPTY_FIELD_VAL_EXCEPTION + mappingRecordByDeveloperNameMap.get('Faktura6').Tag_Name__c);
+        }   
+		fakturaBodyStr += addNode(mappingRecordByDeveloperNameMap.get('Faktura6').Namespace__c + ':' +
+								mappingRecordByDeveloperNameMap.get('Faktura6').Tag_Name__c, fieldVal);        
+                    
+        for(Integer i=12; i<=14; i++){  
+            attributeStr = 'Faktura' + i;
+            fieldVal = ReportsGenerationUtility.getValue(salesInv, mappingRecordByDeveloperNameMap.get(attributeStr).SFDC_Field_Name__c);            
+            if(String.isBlank(fieldVal)){
+                throw new CustomException(EMPTY_FIELD_VAL_EXCEPTION + mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c);
+            }else{
+				fakturaBodyStr += addNode(mappingRecordByDeveloperNameMap.get(attributeStr).Namespace__c + ':' +
+									mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c, fieldVal);
+			}		            
+        }        
+        for(Integer i=15; i<=22; i++){  
+            attributeStr = 'Faktura' + i;
+            fieldVal = mappingRecordByDeveloperNameMap.get(attributeStr).Default_Value__c;   
+            if(String.isBlank(fieldVal)){
+                throw new CustomException('Default value required:' + mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c);
+            }else{
+				fakturaBodyStr += addNode(mappingRecordByDeveloperNameMap.get(attributeStr).Namespace__c + ':' +
+									mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c, fieldVal);
+			}		            
+        }
+        fieldVal = 'VAT';
+        String invTot = ReportsGenerationUtility.getValue(salesInv, mappingRecordByDeveloperNameMap.get('Faktura14').SFDC_Field_Name__c);                    
+        if(String.isNotBlank(invTot)){
+			Decimal invoiceTotal = Decimal.valueOf(invTot);
+			fieldVal = invoiceTotal > 0 ? 'VAT' : 'KOREKTA';                        
+		}             
+		fakturaBodyStr += addNode(mappingRecordByDeveloperNameMap.get('Faktura23').Namespace__c + ':' +
+							mappingRecordByDeveloperNameMap.get('Faktura23').Tag_Name__c, fieldVal);
     	return fakturaBodyStr;
     }
     
@@ -779,15 +989,34 @@ public with sharing class GeneratePolandInvoicesReportController {
     
     private String getfakturaWierszBody(c2g__codaInvoiceLineItem__c saleLineItem){
     	String fakturaWierszStr = '';
-    	String attributeStr;   	
+    	String attributeStr; 
+        String fieldVal;
         try{
-            for(Integer i=1; i<=8; i++){
-                attributeStr = 'FakturaWiersz' + i;
-                fakturaWierszStr += addNode(mappingRecordByDeveloperNameMap.get(attributeStr).Namespace__c + ':' +
-                                            mappingRecordByDeveloperNameMap.get(attributeStr).Tag_Name__c, 
-                                            ReportsGenerationUtility.getValue(saleLineItem, 
-                                            mappingRecordByDeveloperNameMap.get(attributeStr).SFDC_Field_Name__c));
-    		}            
+            
+             fieldVal = ReportsGenerationUtility.getValue(saleLineItem, 
+                        mappingRecordByDeveloperNameMap.get('FakturaWiersz1').SFDC_Field_Name__c);
+             if(String.isBlank(fieldVal)){
+                throw new CustomException(EMPTY_FIELD_VAL_EXCEPTION + mappingRecordByDeveloperNameMap.get('FakturaWiersz1').Tag_Name__c);
+             }
+             fakturaWierszStr = addNode(mappingRecordByDeveloperNameMap.get('FakturaWiersz1').Namespace__c + ':' +
+                                mappingRecordByDeveloperNameMap.get('FakturaWiersz1').Tag_Name__c,
+                 				ReportsGenerationUtility.getValue(saleLineItem, 
+                           		mappingRecordByDeveloperNameMap.get('FakturaWiersz1').SFDC_Field_Name__c)) +
+                 
+                 				addNode(mappingRecordByDeveloperNameMap.get('FakturaWiersz2').Namespace__c + ':' +
+                                mappingRecordByDeveloperNameMap.get('FakturaWiersz2').Tag_Name__c,
+                 				ReportsGenerationUtility.getValue(saleLineItem, 
+                           		mappingRecordByDeveloperNameMap.get('FakturaWiersz2').SFDC_Field_Name__c)) +
+                 
+                 				addNode(mappingRecordByDeveloperNameMap.get('FakturaWiersz4').Namespace__c + ':' +
+                                mappingRecordByDeveloperNameMap.get('FakturaWiersz4').Tag_Name__c,
+                 				ReportsGenerationUtility.getValue(saleLineItem, 
+                           		mappingRecordByDeveloperNameMap.get('FakturaWiersz4').SFDC_Field_Name__c)) +
+                 
+                 				addNode(mappingRecordByDeveloperNameMap.get('FakturaWiersz5').Namespace__c + ':' +
+                                mappingRecordByDeveloperNameMap.get('FakturaWiersz5').Tag_Name__c,
+                 				ReportsGenerationUtility.getValue(saleLineItem, 
+                           		mappingRecordByDeveloperNameMap.get('FakturaWiersz5').SFDC_Field_Name__c));	           
         }catch(Exception e){
             ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, e.getMessage() + ' ' + e.getStackTraceString()));
         }     	
@@ -861,6 +1090,11 @@ public with sharing class GeneratePolandInvoicesReportController {
             }else if(label == 'KR_KontoZapis'){
                 mapOfAttributesAndLabel.put(mappingRecordByDeveloperNameMap.get('KR_KontoZapis0').Attribute_Name__c,
                                             mappingRecordByDeveloperNameMap.get('KR_KontoZapis0').Attribute_Value__c);
+            }else if(label == 'KR_KodFormularza'){
+                mapOfAttributesAndLabel.put(mappingRecordByDeveloperNameMap.get('KR_KodFormularza1').Attribute_Name__c,
+                                            mappingRecordByDeveloperNameMap.get('KR_KodFormularza1').Attribute_Value__c);
+                mapOfAttributesAndLabel.put(mappingRecordByDeveloperNameMap.get('KR_KodFormularza0').Attribute_Name__c,
+                                            mappingRecordByDeveloperNameMap.get('KR_KodFormularza0').Attribute_Value__c);
             }         
         }catch(Exception e){
             ApexPages.addMessage(new ApexPages.message(ApexPages.Severity.ERROR, e.getMessage() + ' ' + e.getStackTraceString()));
@@ -1183,6 +1417,31 @@ public with sharing class GeneratePolandInvoicesReportController {
             this.opisKategorii = opisKategorii;
         } 	
     }
+    
+    private void getStartEndDate (){
+		startDate = Date.today();
+		List<c2g__codaPeriod__c> periodsList = new List<c2g__codaPeriod__c>();
+
+		periodsList =	[ SELECT	
+					Id,
+					c2g__PeriodNumber__c,
+					c2g__StartDate__c,
+					c2g__EndDate__c
+			FROM	c2g__codaPeriod__c
+			WHERE c2g__PeriodNumber__c = :selectedMonth and c2g__YearName__r.Name = :selectedYear
+                         and c2g__OwnerCompany__r.Id IN :listOfSelectedCompanies
+					];
+		for(c2g__codaPeriod__c period : periodsList){
+			if(period.c2g__StartDate__c < startDate){
+				startDate = period.c2g__StartDate__c;
+			}
+			if(endDate != null && period.c2g__EndDate__c > endDate){
+				endDate = period.c2g__EndDate__c;
+            }else if (endDate == null){
+                endDate = period.c2g__EndDate__c;
+			}
+		}
+	}
     
     private Set<String> getFieldNameSet(String parentTagName){
 		Set<String> fieldNameSet = new Set<String>();
