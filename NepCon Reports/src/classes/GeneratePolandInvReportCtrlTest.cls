@@ -17,6 +17,7 @@ public class GeneratePolandInvReportCtrlTest {
         try{
             Test.startTest();
             
+            Test.startTest();            
             Integer lim = 10;
             CreateTestData.postInvoices(lim);
             CreateTestData.postPInvoices(lim);

@@ -65,6 +65,7 @@ public class CreateTestData {
     //c2g__codaInvoice__c + c2g__codaInvoiceLineItem__c
     createInvoice(companyList, compOwnerQueueList, accList, prodList, accountCurrencyList, numOfInvoicesPerAccount);
      
+    createInvoice(companyList, compOwnerQueueList, accList, prodList, accountCurrencyList, numOfInvoicesPerAccount);   
     createAndPostJournals(glaList);
 
   }
@@ -182,6 +183,7 @@ public class CreateTestData {
           c2g__EndDate__c = System.today().addMonths(1),
           c2g__OwnerCompany__c = company.id,
           c2g__PeriodNumber__c = '001',
+          c2g__PeriodNumber__c = '123',
           c2g__Description__c = 'Trading Period',
           c2g__YearName__c = yr.id
       );

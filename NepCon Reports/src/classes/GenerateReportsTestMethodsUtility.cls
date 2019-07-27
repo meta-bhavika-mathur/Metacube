@@ -54,6 +54,8 @@ public class GenerateReportsTestMethodsUtility {
         List<c2g__codaInvoice__c> codaInvlistToupdate = new List<c2g__codaInvoice__c>();       
         for(c2g__codaInvoice__c inv : codaInvList){
             inv.c2g__Account__c = acc.Id;           
+            inv.c2g__Account__c = acc.Id; 
+            inv.c2g__TaxCode1__c = taxcode.Id;
             codaInvlistToupdate.add(inv);          
         }
         update codaInvlistToupdate; 
@@ -68,6 +70,9 @@ public class GenerateReportsTestMethodsUtility {
                        LIMIT 1
         			];    
         
+        supplierAcc.c2g__CODAValidatedBillingStreet__c = 'Street123';
+        supplierAcc.c2g__CODABankZipPostalCode__c = 'ZIP123';
+        supplierAcc.c2g__CODAValidatedBillingCountry__c = 'TestCountry';
         supplierAcc.c2g__CODAECCountryCode__c = 'LV';
         supplierAcc.c2g__CODAVATRegistrationNumber__c = 'LT2312345';
         supplierAcc.AccountNumber = '2423401';
@@ -84,7 +89,8 @@ public class GenerateReportsTestMethodsUtility {
                                                                                         c2g__InvoiceDate__c = Date.today().addDays(-5),
                                                                                         c2g__DueDate__c = Date.today().addDays(5),
                                                                                         c2g__Account__c = supplierAcc.Id,
-                                                                                        c2g__InvoiceStatus__c = 'In Progress',                                                                                  
+                                                                                        c2g__InvoiceStatus__c = 'In Progress', 
+                																		c2g__RegisteredDate__c = Date.today().addDays(-5),
                                                                                         c2g__AccountInvoiceNumber__c = '2897' + String.valueOf(i)
                    																 	);
             listOfPurchaseInvoices.add(pInvoice);         
@@ -97,8 +103,11 @@ public class GenerateReportsTestMethodsUtility {
                        WHERE Name = 'Test Account 1' 
                        LIMIT 1
         			];
-        supplierAcc.c2g__CODAVATRegistrationNumber__c = 'LT2312346';
-        supplierAcc.AccountNumber = '242678';
+        supplierAcc2.c2g__CODAValidatedBillingStreet__c = 'Street123';
+        supplierAcc2.c2g__CODABankZipPostalCode__c = 'ZIP123';
+        supplierAcc2.c2g__CODAValidatedBillingCountry__c = 'TestCountry';
+        supplierAcc2.c2g__CODAVATRegistrationNumber__c = 'LT2312346';
+        supplierAcc2.AccountNumber = '242678';
         supplierAcc2.c2g__CODAECCountryCode__c = 'LT';
         update supplierAcc2;
         listOfPurchaseInvoices.get(1).c2g__Account__c = supplierAcc2.Id;
