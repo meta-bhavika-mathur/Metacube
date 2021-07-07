@@ -1,0 +1,69 @@
+<apex:page controller="GeneratePolandInvoicesReportController" docType="html-5.0" >
+    <style>
+    
+    </style>
+    <style>
+        .select-list {
+            width: 120px;
+            margin : 2px;
+        }
+
+        .select-list-wrapper {
+            position: relative;
+            float: left;
+            margin: 5px;
+            width: 150px;
+        }    
+    </style>
+    <apex:sectionHeader title="Poland Report Generator" id="pageTitle"/>
+    <apex:form id="form">
+        <apex:pageBlock >
+            <apex:pageMessages />
+            <apex:pageBlockSection columns="1">
+                <apex:outputLabel >Select Report Type:</apex:outputLabel>
+                <apex:selectRadio value="{!fileType}">
+  		      		<apex:selectOptions value="{!fileTypeOptions}"/>
+    			</apex:selectRadio> 
+            </apex:pageBlockSection>
+            <div class="main-block">
+	                <div class="select-list-wrapper">
+	                    <span class="span-position">Choose Year:</span>
+	                    <br/>
+	                    <apex:selectList disabled="false" multiselect="false" value="{!selectedYear}" styleClass="select-list">
+	                        <apex:selectOptions value="{!yearOptions}"></apex:selectOptions>
+	                    </apex:selectList>
+	                </div>
+	                <div class="select-list-wrapper">
+	                    <span class="span-position">Choose Month:</span>
+	                    <br/>
+	                    <apex:selectList disabled="false" multiselect="false" value="{!selectedMonth}" styleClass="select-list">
+	                        <apex:selectOptions value="{!periodOptions}"></apex:selectOptions>
+	                    </apex:selectList>
+	                </div>
+	                <div class="select-list-wrapper">
+	                    <span class="span-position">Choose Company:</span>
+	                    <br/>
+	                    <apex:selectList multiselect="true" value="{!listOfSelectedCompanies}" styleClass="select-list">
+	                        <apex:selectOptions value="{!companyOptions}"></apex:selectOptions>
+	                    </apex:selectList>
+	                </div>
+            	</div>
+			<apex:pageBlockButtons location="bottom">
+              <apex:commandButton value="Create Poland Invoices Report" action="{!createXml}" reRender="form" status="filePreparationStatus" />
+          	</apex:pageBlockButtons> 
+        </apex:pageBlock>
+        <apex:pageBlock >
+            <apex:pageBlockSection >
+                <apex:pageBlockSectionItem >
+                    <apex:outputLink rendered="{!docLink != null}" value="{!docLink}">Download File</apex:outputLink>
+                </apex:pageBlockSectionItem>
+                <apex:actionStatus id="filePreparationStatus">
+                	<apex:facet name="start">
+                    	<img src="/img/loading24.gif" style="vertical-align:middle;"/>
+                        <span style="margin-left: 10px; font-size: 12px; font-weight: bold; color: #000000;">Please wait while we process your request...</span>
+					</apex:facet>
+                </apex:actionStatus>        
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+    </apex:form>
+</apex:page>

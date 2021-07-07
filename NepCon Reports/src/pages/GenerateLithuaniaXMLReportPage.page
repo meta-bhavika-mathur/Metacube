@@ -1,0 +1,97 @@
+<apex:page controller="GenerateLTReportXMLController" docType="html-5.0" >
+    <style>
+        .select-list {
+            width: 100px;
+        }
+
+        .select-list-wrapper {
+            position: relative;
+            float: left;
+            margin: 5px;
+            width: 100px;
+        }    
+    </style>
+    <apex:sectionHeader title="Lithuania Report Generator" id="pageTitle"/>
+    <apex:form id="form">
+        <apex:pageBlock >
+            <apex:pageMessages />
+            <apex:actionRegion >
+                <apex:outputLabel >Select Report Type:</apex:outputLabel>
+                <apex:selectRadio value="{!fileType}">
+  		      		<apex:selectOptions value="{!fileTypeOptions}"/>
+                     <apex:actionSupport event="onchange" reRender="type1, type2" action="{!checkChange}"/>
+    			</apex:selectRadio>
+			</apex:actionRegion>
+            <apex:outputPanel id="type1">
+                <apex:outputPanel rendered="{!IF(fileType=='report1',true,false)}" >
+                <div class="main-block">
+                    <div class="select-list-wrapper">
+                        <span class="span-position">Choose Year:</span>
+                        <br/>
+                        <apex:selectList disabled="false" multiselect="true" value="{!periodYearList}" styleClass="select-list">
+                            <apex:selectOptions value="{!yearOptions}"></apex:selectOptions>
+                        </apex:selectList>
+                    </div>
+                    <div class="select-list-wrapper">
+                        <span class="span-position">Choose Month:</span>
+                        <br/>
+                        <apex:selectList disabled="false" multiselect="true" value="{!periodMonthList}" styleClass="select-list">
+                            <apex:selectOptions value="{!periodOptions}"></apex:selectOptions>
+                        </apex:selectList>
+                    </div>
+                    <div class="select-list-wrapper">
+	                    <span class="span-position">Choose Company:</span>
+	                    <br/>
+	                    <apex:selectList multiselect="true" value="{!listOfSelectedCompanies}" styleClass="select-list">
+	                        <apex:selectOptions value="{!companyOptions}"></apex:selectOptions>
+	                    </apex:selectList>
+	                </div>
+                </div>
+               </apex:outputPanel>
+            </apex:outputPanel>
+            <apex:outputPanel id="type2" >
+                <apex:outputPanel rendered="{!IF(fileType=='report2',true,false)}">
+                <div class="main-block">
+                    <div class="select-list-wrapper">
+                        <span class="span-position">Choose Year:</span>
+                        <br/>
+                        <apex:selectList disabled="false" multiselect="false" value="{!selectedYear}" styleClass="select-list">
+                            <apex:selectOptions value="{!yearOptions}"></apex:selectOptions>
+                        </apex:selectList>
+                    </div>
+                    <div class="select-list-wrapper">
+                        <span class="span-position">Choose Month:</span>
+                        <br/>
+                        <apex:selectList disabled="false" multiselect="false" value="{!selectedMonth}" styleClass="select-list">
+                            <apex:selectOptions value="{!periodOptions}"></apex:selectOptions>
+                        </apex:selectList>
+                    </div>
+                    <div class="select-list-wrapper">
+	                    <span class="span-position">Choose Company:</span>
+	                    <br/>
+	                    <apex:selectList multiselect="true" value="{!listOfSelectedCompanies}" styleClass="select-list">
+	                        <apex:selectOptions value="{!companyOptions}"></apex:selectOptions>
+	                    </apex:selectList>
+	                </div>
+                </div>
+                </apex:outputPanel>
+			</apex:outputPanel>
+			<apex:pageBlockButtons location="bottom">
+              <apex:commandButton value="Create Report" action="{!createXml}" reRender="form" status="filePreparationStatus" />
+          	</apex:pageBlockButtons> 
+        </apex:pageBlock>
+        <apex:pageBlock >
+            <apex:pageBlockSection >
+                <apex:pageBlockSectionItem >
+                    <apex:outputLink rendered="{!docLink != null}" value="{!docLink}">Download File</apex:outputLink>
+                </apex:pageBlockSectionItem>
+                <apex:actionStatus id="filePreparationStatus">
+                	<apex:facet name="start">
+                    	<img src="/img/loading24.gif" style="vertical-align:middle;"/>
+                        <span style="margin-left: 10px; font-size: 12px; font-weight: bold; color: #000000;">Please wait while we process your request...</span>
+					</apex:facet>
+                </apex:actionStatus>        
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+    </apex:form>
+</apex:page>
